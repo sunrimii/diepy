@@ -142,11 +142,11 @@ class Tank(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
 
-        self.max_hp = TANK_BASIC_MAX_HP
-        self.hp_regen = TANK_BASIC_HP_REGEN
-        self.damage = TANK_BASIC_DAMAGE
-        self.acc = TANK_BASIC_ACC
-        self.reloading_time = TANK_BASIC_RELOADING_TIME
+        self.max_hp = 10
+        self.hp_regen = 0.1
+        self.damage = 1
+        self.acc = 0.03
+        self.reloading_time = 500
 
         self.pos = pygame.math.Vector2(TANK_INIT_POS)
         self.speed = pygame.math.Vector2(0, 0)
@@ -194,11 +194,11 @@ class Tank(pygame.sprite.Sprite):
 
     def update(self, pressed_keys, mouse_pos, tank_max_hp, tank_hp_regen, tank_damage, tank_acc, reloading_time):
         # 更新能力值
-        self.max_hp = TANK_BASIC_MAX_HP + tank_max_hp
-        self.hp_regen = TANK_BASIC_HP_REGEN + tank_hp_regen
-        self.damage = TANK_BASIC_DAMAGE + tank_damage
-        self.acc = TANK_BASIC_ACC + tank_acc
-        self.reloading_time = TANK_BASIC_RELOADING_TIME + reloading_time
+        self.max_hp = 10 + tank_max_hp
+        self.hp_regen = 0.1 + tank_hp_regen
+        self.damage = 1 + tank_damage
+        self.acc = 0.03 + tank_acc
+        self.reloading_time = 500 + reloading_time
 
         # 檢查是否有加速度
         if pressed_keys[K_w]:
@@ -207,14 +207,14 @@ class Tank(pygame.sprite.Sprite):
             self.speed += (0, self.acc)
         else:
             self.speed.y /= 1.01
-            self.speed.y = 0 if abs(self.speed.y) < 0.00000001 else self.speed.y
+            self.speed.y = 0 if abs(self.speed.y) < 0.0000005 else self.speed.y
         if pressed_keys[K_a]:
             self.speed += (-self.acc, 0)
         elif pressed_keys[K_d]:
             self.speed += (self.acc, 0)
         else:
             self.speed.x /= 1.01
-            self.speed.x = 0 if abs(self.speed.x) < 0.00000001 else self.speed.x
+            self.speed.x = 0 if abs(self.speed.x) < 0.0000005 else self.speed.x
 
         # 限制速度在指定區間內
         self.speed.x = min(self.max_speed, max(-self.max_speed, self.speed.x))
