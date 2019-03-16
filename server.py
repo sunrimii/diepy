@@ -361,7 +361,7 @@ if __name__ == "__main__":
 
     enemies = pygame.sprite.Group()
     bullet_packs = pygame.sprite.Group()
-    players = {}
+    players = pygame.sprite.Group()
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("127.0.0.1", 5278))
@@ -371,9 +371,8 @@ if __name__ == "__main__":
     conn, addr = s.accept()
     print("玩家", addr, "已連線")
 
-    players[addr] = pygame.sprite.Group()
     tank = Tank(BLUE, DARK_BLUE)
-    players[addr].add(tank)
+    players.add(tank)
 
     while True:
         try:
@@ -401,8 +400,7 @@ if __name__ == "__main__":
             except:
                 # 第一次循環沒有鏡頭偏移
                 pass
-            for player in players.values():
-                player.update(pressed_keys, is_click, mouse_pos)
+            players.update(pressed_keys, is_click, mouse_pos)
             enemies.update()
             bullet_packs.update()
 
