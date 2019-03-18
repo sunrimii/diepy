@@ -1,9 +1,9 @@
 import pygame
-import socket
+import pickle
 
 pygame.init()
-surf = pygame.Surface((10,10))
-pygame.surfarray.array2d(surf)
+s = pygame.sprite.Sprite()
+pickle.dumps(s)
 
 # for event in pygame.event.get():
 #             if event.type == pygame.locals.QUIT:

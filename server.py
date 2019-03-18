@@ -110,7 +110,7 @@ class Bullet(pygame.sprite.Sprite):
         
         self.is_alive = True
 
-        self.speed = pygame.math.Vector2(3, 0).rotate(-degs)
+        self.speed = pygame.math.Vector2(3.5, 0).rotate(-degs)
         
         # 將起始位置從坦克中心移至砲口
         offset = pygame.math.Vector2(self.speed)
@@ -176,7 +176,7 @@ class BulletPack(pygame.sprite.Sprite):
         self.num_of_bullets = min([randrange(100, 500) for _ in range(5)])
         
         # 隨機起始位置
-        x, y = randrange(world.get_width()), randrange(world.get_height())
+        x, y = randrange(world_w), randrange(world_h)
         self.pos = pygame.math.Vector2(x, y)
 
         self.speed = pygame.math.Vector2(0.05, 0)
@@ -231,8 +231,8 @@ class Tank(pygame.sprite.Sprite):
         self.acc = 0.03
         self.pos = pygame.math.Vector2(500, 500)
         self.speed = pygame.math.Vector2(0, 0)
-        self.max_speed = 1.7
-        self.recoil = pygame.math.Vector2(0.000, 0)
+        self.max_speed = 2.5
+        self.recoil = pygame.math.Vector2(0.1, 0)
         
         self.scale_of_barrel = 1
         
@@ -241,7 +241,7 @@ class Tank(pygame.sprite.Sprite):
         self.time_of_attacking = 0
         self.reloading_time = 200
 
-    def update(self, pressed_keys, is_click, mouse_pos):
+    def update(self, pressed_keys, is_click, mouse_x, mouse_y):
         # 檢查是否有加速度
         if pressed_keys[pygame.locals.K_w]:
             self.speed += (0, -self.acc)
@@ -276,7 +276,6 @@ class Tank(pygame.sprite.Sprite):
 
         # 旋轉角度(https://stackoverflow.com/questions/10473930/how-do-i-find-the-angle-between-2-points-in-pygame)
         # 注意遊戲的座標與常用座標不同(Y軸相反)使用時須加上負號
-        mouse_x, mouse_y = mouse_pos
         dx, dy = mouse_x-self.pos.x, mouse_y-self.pos.y
         degs = degrees(atan2(-dy, dx))
         
@@ -285,7 +284,7 @@ class Tank(pygame.sprite.Sprite):
             self.is_reloading = True
             self.time_of_attacking = pygame.time.get_ticks()
             bullet = Bullet(self.color_of_body, self.color_of_border, self.pos, degs)
-            players.add(bullet)
+            player.add(bullet)
             self.num_of_bullets -= 1
 
         # 若發射後的冷卻期間伸縮砲管
@@ -355,94 +354,146 @@ class Tank(pygame.sprite.Sprite):
 
 
 if __name__ == "__main__":
+    # s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # s.bind(("127.0.0.1", 5278))
+    # s.listen(5)
+
     pygame.init()
+    pygame.display.set_caption("Diepy")
+    icon = pygame.image.load("icon.png")
+    pygame.display.set_icon(icon)
+    screen = pygame.display.set_mode()
     
+    # 建立地圖
+    world = pygame.Surface((5000, 5000))
+    # 填充背景
+    world.fill(COLOR_OF_BG)
+    # 繪製減速區
+    world_w, world_h = world.get_size()
+    pygame.gfxdraw.box(world, (0,0,world_w,300), COLOR_OF_SLOWZONE)
+    pygame.gfxdraw.box(world, (0,0,300,world_h), COLOR_OF_SLOWZONE)
+    pygame.gfxdraw.box(world, (0,world_h-300,world_w,300), COLOR_OF_SLOWZONE)
+    pygame.gfxdraw.box(world, (world_w-300,0,300,world_h), COLOR_OF_SLOWZONE)
+    # 繪製網格
+    for x in range(0, world_w, 20):
+        pygame.gfxdraw.box(world, (x,0,2,world_h), COLOR_OF_GRID)
+    for y in range(0, world_h, 20):
+        pygame.gfxdraw.box(world, (0,y,world_w,2), COLOR_OF_GRID)
+
+    bg = world.copy()
+
     clock = pygame.time.Clock()
 
     enemies = pygame.sprite.Group()
     bullet_packs = pygame.sprite.Group()
-    players = pygame.sprite.Group()
-
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(("127.0.0.1", 5278))
-
-    s.listen(5)
-    print("伺服器等待連線中...")
-    conn, addr = s.accept()
-    print("玩家", addr, "已連線")
+    player = pygame.sprite.Group()
 
     tank = Tank(BLUE, DARK_BLUE)
-    players.add(tank)
-
-    while True:
-        try:
-            # pressed_keys = pickle.loads(conn.recv(1024))
-            # is_click     = pickle.loads(conn.recv(1024))
-            # mouse_pos    = pickle.loads(conn.recv(1024))
-            pressed_keys, is_click, mouse_pos = pickle.loads(conn.recv(1024))
-            print("已收到玩家", addr, "的指令")
-
-            # 生成補充的彈藥
-            if len(bullet_packs) < 5:
-                bp = BulletPack()
-                bullet_packs.add(bp)
-            
-            # 生成敵人
-            if len(enemies) < 1:
-                trigon = Trigon()
-                enemies.add(trigon)
-            
-            # 更新精靈
-            try:
-                # 加上鏡頭位置的偏移
-                mouse_x += cam.x
-                mouse_y += cam.y
-            except:
-                # 第一次循環沒有鏡頭偏移
-                pass
-            players.update(pressed_keys, is_click, mouse_pos)
-            enemies.update()
-            bullet_packs.update()
-
-
-
-            # 設定每秒144幀
-            clock.tick(144)
-
-            data = pickle.dumps((enemies, bullet_packs, players))
-            conn.sendall(data)
-            print("伺服器已回應玩家")
-        
-        except Exception as e:
-            print(e)
-            print("玩家中斷連線")
-            conn.close()
-            break
+    player.add(tank)
     
-    s.close()
+    cam = pygame.Rect(0, 0, 1920, 1080)
+    cam.center = tank.pos
 
-#     def clientthread(conn):
-#         #Sending message to connected client
-#         conn.send('Welcome to the server. Type something and hit enter\n') #send only takes string
-# #infinite loop so that function do not terminate and thread do not end.
-# while True:
-#     #Receiving from client
-#     data = conn.recv(1024)
-#     reply = 'OK...'   data
-#     if not data: 
-#         break
-#     conn.sendall(reply)
-# #came out of loop
-# conn.close()
-# #now keep talking with the client
-# while 1:
-#     #wait to accept a connection - blocking call
-#     conn, addr = s.accept()
-#     print 'Connected with '   addr[0]   ':'   str(addr[1])
-#     #start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
-#     start_new_thread(clientthread ,(conn,))
-# s.close()
+    running = True
+    while running:
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+
+    #     print("伺服器等待連線中...")
+    #     conn, addr = s.accept()
+    #     print("玩家", addr, "已連線")
+        
+    #     while True:
+    #         try:
+                # data = b""
+                # while True:
+                #     print("data")
+                #     packet = conn.recv(1024)
+                #     if not packet:
+                #         break
+                #     data += packet
+                # data = conn.recv(4096)
+                # pressed_keys, is_click, mouse_pos = pickle.loads(data)
+                # print("已收到玩家", addr, "的指令")
+                
+                
+
+        # 生成補充的彈藥
+        if len(bullet_packs) < 20:
+            bp = BulletPack()
+            bullet_packs.add(bp)
+        
+        # 生成敵人
+        if len(enemies) < 30:
+            trigon = Trigon()
+            enemies.add(trigon)
+        
+        # 更新精靈
+        pressed_keys = pygame.key.get_pressed()
+        is_click = pygame.mouse.get_pressed()[0]
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_x, mouse_y = mouse_pos
+        try:
+            # 加上鏡頭位置的偏移
+            mouse_x += cam.x
+            mouse_y += cam.y
+        except:
+            # 第一次循環沒有鏡頭偏移
+            pass
+        player.update(pressed_keys, is_click, mouse_x, mouse_y)
+        enemies.update()
+        bullet_packs.update()
+
+        # 更新畫面
+        enemies.clear(world, bg)
+        bullet_packs.clear(world, bg)
+        player.clear(world, bg)
+        enemies.draw(world)
+        bullet_packs.draw(world)
+        player.draw(world)
+
+        # 使鏡頭平滑移動
+        cam.center += (tank.pos-cam.center) * 0.1
+
+        # 限制移動邊界
+        cam.x = min(max(cam.x, 0), world_w-cam.w) 
+        cam.y = min(max(cam.y, 0), world_h-cam.h)
+
+        # 建立要顯示給玩家的畫面
+        screen.blit(world.subsurface(cam), (0,0))
+        
+        # 於右下角顯示剩餘子彈數
+        text = "x" + str(tank.num_of_bullets)
+        font = pygame.font.SysFont("impact", 40)
+        font_surf = font.render(text, True, BLACK)
+        x = 1700
+        y = 500
+        screen.blit(font_surf, (x,y))
+        font_surf = font.render(text, True, WHITE)
+        x -= 3
+        y -= 3
+        screen.blit(font_surf, (x,y))
+
+        
+        # player_scr = pygame.surfarray.array2d(player_scr)
+        # data = pickle.dumps(player_scr)
+        # conn.sendall(data)
+        # print("伺服器已回應玩家")
+
+        # 設定每秒144幀
+        clock.tick(144)
+        pygame.display.update()        
+                # except Exception as e:
+                #     print(e)
+                #     conn.close()
+                #     print("玩家中斷連線")
+                #     break
 
 
-    pygame.quit()
-    # sys.exit()
+pygame.quit()
+# sys.exit()
