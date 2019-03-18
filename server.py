@@ -70,7 +70,7 @@ class Trigon(pygame.sprite.Sprite):
             # 出生時淡入
             self.image_alpha += 15
             self.image.set_alpha(self.image_alpha)
-        elif self.hp <= 0:
+        elif self.hp == 0:
             # 消失時放大
             self.image_scale = int(self.image_scale[0]*1.055), int(self.image_scale[1]*1.06)
             self.image = pygame.transform.scale(self.image, self.image_scale)
@@ -82,8 +82,8 @@ class Trigon(pygame.sprite.Sprite):
             if self.image_alpha <= 0:
                 self.kill()
         
-        # 顯示血量
-        elif self.hp != self.max_hp:
+        # 受傷時顯示血量
+        elif 0 < self.hp < self.max_hp:
             # 新建加長的畫布
             new_image = pygame.Surface((self.image.get_width(), self.image.get_height()+15), pygame.locals.SRCALPHA)
             # 在上方先畫上原本的
