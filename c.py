@@ -17,8 +17,8 @@ while True:
 
 
 
-surf = pickle.loads(data)
-surf = pygame.surfarray.make_surface(surf)
+string = pickle.loads(data)
+surf = pygame.image.fromstring(string, (100,100), "RGB")
 
 
 
