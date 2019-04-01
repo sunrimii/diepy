@@ -45,14 +45,14 @@ class Trigon(pygame.sprite.Sprite):
         self.image_alpha = 0
         
         # 隨機起始位置
-        x, y = randrange(game.world_w), randrange(game.world_h)
+        x, y = randrange(world_w), randrange(world_h)
         self.pos = pygame.math.Vector2(x, y)
         self.rect = self.image.get_rect(center=self.pos)
     
     def update(self):
         # distance_to(Vector2) -> float
         # 追蹤最接近的坦克
-        dx, dy = game.tank.pos.x-self.pos.x, game.tank.pos.y-self.pos.y
+        dx, dy = tank.pos.x-self.pos.x, tank.pos.y-self.pos.y
         degs = degrees(atan2(-dy, dx))
         
         self.image = pygame.transform.rotate(self.image_orig, degs)
@@ -60,7 +60,7 @@ class Trigon(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
         # 更新位置
-        self.speed = pygame.math.Vector2(1.5, 0).rotate(-degs)
+        self.speed = pygame.math.Vector2(0.8, 0).rotate(-degs)
         self.pos += self.speed
         self.rect = self.image.get_rect(center=self.pos)
 
@@ -160,11 +160,11 @@ class Bullet(pygame.sprite.Sprite):
 
         # 碰撞檢測
         if self.is_alive:
-            for enemy in pygame.sprite.spritecollide(self, game.enemies, False, pygame.sprite.collide_mask):
+            for enemy in pygame.sprite.spritecollide(self, enemies, False, pygame.sprite.collide_mask):
                 if enemy.hp > 0:
                     self.is_alive = False
                     enemy.hp -= 1
-                    break
+                    #do something
 
 class BulletPack(pygame.sprite.Sprite):
     def __init__(self):
@@ -176,7 +176,7 @@ class BulletPack(pygame.sprite.Sprite):
         self.num_of_bullets = min([randrange(100, 500) for _ in range(5)])
         
         # 隨機起始位置
-        x, y = randrange(game.world_w), randrange(game.world_h)
+        x, y = randrange(world_w), randrange(world_h)
         self.pos = pygame.math.Vector2(x, y)
 
         self.speed = pygame.math.Vector2(0.05, 0)
@@ -231,8 +231,8 @@ class Tank(pygame.sprite.Sprite):
         self.acc = 0.03
         self.pos = pygame.math.Vector2(500, 500)
         self.speed = pygame.math.Vector2(0, 0)
-        self.max_speed = 2.0
-        self.recoil = pygame.math.Vector2(0.01, 0)
+        self.max_speed = 2.5
+        self.recoil = pygame.math.Vector2(0.1, 0)
         
         self.scale_of_barrel = 1
         
@@ -266,13 +266,13 @@ class Tank(pygame.sprite.Sprite):
         self.pos += self.speed
 
         # 若進入地圖邊緣會減速
-        in_slow_zone = (not(300<self.pos.x<game.world_w-300)) or (not(300<self.pos.y<game.world_h-300))
+        in_slow_zone = (not(300<self.pos.x<world_w-300)) or (not(300<self.pos.y<world_h-300))
         if in_slow_zone:
             self.speed /= 1.05
 
         # 限制移動邊界
-        self.pos.x = min(max(self.pos.x, 0), game.world_w)
-        self.pos.y = min(max(self.pos.y, 0), game.world_h)
+        self.pos.x = min(max(self.pos.x, 0), world_w)
+        self.pos.y = min(max(self.pos.y, 0), world_h)
 
         # 旋轉角度(https://stackoverflow.com/questions/10473930/how-do-i-find-the-angle-between-2-points-in-pygame)
         # 注意遊戲的座標與常用座標不同(Y軸相反)使用時須加上負號
@@ -284,7 +284,7 @@ class Tank(pygame.sprite.Sprite):
             self.is_reloading = True
             self.time_of_attacking = pygame.time.get_ticks()
             bullet = Bullet(self.color_of_body, self.color_of_border, self.pos, degs)
-            game.player.add(bullet)
+            player.add(bullet)
             self.num_of_bullets -= 1
 
         # 若發射後的冷卻期間伸縮砲管
@@ -343,138 +343,66 @@ class Tank(pygame.sprite.Sprite):
 
         # 碰撞檢測
         if self.is_alive:
-            for enemy in pygame.sprite.spritecollide(self, game.enemies, False, pygame.sprite.collide_mask):
+            for enemy in pygame.sprite.spritecollide(self, enemies, False, pygame.sprite.collide_mask):
                 if enemy.hp > 0:
+                    pass
                     # self.is_alive = False
-                    break
-            for bullet_pack in pygame.sprite.spritecollide(self, game.bullet_packs, False, pygame.sprite.collide_mask):
+            for bullet_pack in pygame.sprite.spritecollide(self, bullet_packs, False, pygame.sprite.collide_mask):
                 if bullet_pack.is_alive:
                     self.num_of_bullets += bullet_pack.num_of_bullets
                     bullet_pack.is_alive = False
 
-class Game:
-    def __init__(self):
-        self.is_running = True
-        self.fps = 144
-        self.mode = "single player"
-        self.font = pygame.font.SysFont("impact", 40)
-        self.cam = pygame.Rect(0, 0, 1920, 1080)
-        self.clock = pygame.time.Clock()
-
-        self.enemies = pygame.sprite.Group()
-        self.bullet_packs = pygame.sprite.Group()
-        self.player = pygame.sprite.Group()
-        
-        pygame.display.set_caption("Diepy")
-        icon = pygame.image.load("icon.png")
-        pygame.display.set_icon(icon)
-        self.screen = pygame.display.set_mode()
-        
-        self.world = pygame.Surface((5000, 5000))
-        self.world.fill(COLOR_OF_BG)
-        
-        # 繪製減速區
-        self.world_w, self.world_h = self.world.get_size()
-        pygame.gfxdraw.box(self.world, (0,0,self.world_w,300), COLOR_OF_SLOWZONE)
-        pygame.gfxdraw.box(self.world, (0,0,300,self.world_h), COLOR_OF_SLOWZONE)
-        pygame.gfxdraw.box(self.world, (0,self.world_h-300,self.world_w,300), COLOR_OF_SLOWZONE)
-        pygame.gfxdraw.box(self.world, (self.world_w-300,0,300,self.world_h), COLOR_OF_SLOWZONE)
-        
-        # 繪製網格
-        for x in range(0, self.world_w, 20):
-            pygame.gfxdraw.box(self.world, (x,0,2,self.world_h), COLOR_OF_GRID)
-        for y in range(0, self.world_h, 20):
-            pygame.gfxdraw.box(self.world, (0,y,self.world_w,2), COLOR_OF_GRID)
-
-        self.bg = self.world.copy()
-
-        if self.mode == "single player":
-            self.tank = Tank(BLUE, DARK_BLUE)
-            self.player.add(self.tank)
-
-    def handle_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.is_running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    self.is_running = False
-    
-    def run_logic(self):
-        
-        
-        # self.cam.center = tank.pos
-
-        # 生成補充的彈藥
-        if len(self.bullet_packs) < 20:
-            bp = BulletPack()
-            self.bullet_packs.add(bp)
-        
-        # 生成敵人
-        if len(self.enemies) < 30:
-            trigon = Trigon()
-            self.enemies.add(trigon)
-        
-        # 更新精靈
-        pressed_keys = pygame.key.get_pressed()
-        is_click = pygame.mouse.get_pressed()[0]
-        mouse_pos = pygame.mouse.get_pos()
-        mouse_x, mouse_y = mouse_pos
-        try:
-            # 加上鏡頭位置的偏移
-            mouse_x += self.cam.x
-            mouse_y += self.cam.y
-        except:
-            # 第一次循環沒有鏡頭偏移
-            pass
-        self.player.update(pressed_keys, is_click, mouse_x, mouse_y)
-        self.enemies.update()
-        self.bullet_packs.update()
-
-        # 使鏡頭平滑移動
-        self.cam.center += (self.tank.pos-self.cam.center) * 0.1
-
-        # 限制移動邊界
-        self.cam.x = min(max(self.cam.x, 0), self.world_w-self.cam.w) 
-        self.cam.y = min(max(self.cam.y, 0), self.world_h-self.cam.h)
-
-    def draw(self):
-        self.enemies.clear(self.world, self.bg)
-        self.bullet_packs.clear(self.world, self.bg)
-        self.player.clear(self.world, self.bg)
-        self.enemies.draw(self.world)
-        self.bullet_packs.draw(self.world)
-        self.player.draw(self.world)
-
-        self.screen.blit(self.world.subsurface(self.cam), (0,0))
-        
-        # 於右下角顯示剩餘子彈數
-        text = "x" + str(self.tank.num_of_bullets)
-        font_surf = self.font.render(text, True, BLACK)
-        x, y = 1700, 500
-        self.screen.blit(font_surf, (x,y))
-        font_surf = self.font.render(text, True, WHITE)
-        x -= 3
-        y -= 3
-        self.screen.blit(font_surf, (x,y))
-    
-        pygame.display.update()
-        
-    def run(self):
-        while self.is_running:
-            self.handle_events()
-            self.run_logic()
-            self.draw()
-            self.clock.tick(self.fps)
 
 if __name__ == "__main__":
-    pygame.init()
-    game = Game()
-    game.run()
-    pygame.quit()
     # s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # s.bind(("127.0.0.1", 5278))
     # s.listen(5)
+
+    pygame.init()
+    pygame.display.set_caption("Diepy")
+    icon = pygame.image.load("icon.png")
+    pygame.display.set_icon(icon)
+    screen = pygame.display.set_mode()
+    
+    # 建立地圖
+    world = pygame.Surface((5000, 5000))
+    # 填充背景
+    world.fill(COLOR_OF_BG)
+    # 繪製減速區
+    world_w, world_h = world.get_size()
+    pygame.gfxdraw.box(world, (0,0,world_w,300), COLOR_OF_SLOWZONE)
+    pygame.gfxdraw.box(world, (0,0,300,world_h), COLOR_OF_SLOWZONE)
+    pygame.gfxdraw.box(world, (0,world_h-300,world_w,300), COLOR_OF_SLOWZONE)
+    pygame.gfxdraw.box(world, (world_w-300,0,300,world_h), COLOR_OF_SLOWZONE)
+    # 繪製網格
+    for x in range(0, world_w, 20):
+        pygame.gfxdraw.box(world, (x,0,2,world_h), COLOR_OF_GRID)
+    for y in range(0, world_h, 20):
+        pygame.gfxdraw.box(world, (0,y,world_w,2), COLOR_OF_GRID)
+
+    bg = world.copy()
+
+    clock = pygame.time.Clock()
+
+    enemies = pygame.sprite.Group()
+    bullet_packs = pygame.sprite.Group()
+    player = pygame.sprite.Group()
+
+    tank = Tank(BLUE, DARK_BLUE)
+    player.add(tank)
+    
+    cam = pygame.Rect(0, 0, 1920, 1080)
+    cam.center = tank.pos
+
+    running = True
+    while running:
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
 
     #     print("伺服器等待連線中...")
     #     conn, addr = s.accept()
@@ -494,13 +422,72 @@ if __name__ == "__main__":
                 # print("已收到玩家", addr, "的指令")
                 
                 
+
+        # 生成補充的彈藥
+        if len(bullet_packs) < 20:
+            bp = BulletPack()
+            bullet_packs.add(bp)
+        
+        # 生成敵人
+        if len(enemies) < 30:
+            trigon = Trigon()
+            enemies.add(trigon)
+        
+        # 更新精靈
+        pressed_keys = pygame.key.get_pressed()
+        is_click = pygame.mouse.get_pressed()[0]
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_x, mouse_y = mouse_pos
+        try:
+            # 加上鏡頭位置的偏移
+            mouse_x += cam.x
+            mouse_y += cam.y
+        except:
+            # 第一次循環沒有鏡頭偏移
+            pass
+        player.update(pressed_keys, is_click, mouse_x, mouse_y)
+        enemies.update()
+        bullet_packs.update()
+
+        # 更新畫面
+        enemies.clear(world, bg)
+        bullet_packs.clear(world, bg)
+        player.clear(world, bg)
+        enemies.draw(world)
+        bullet_packs.draw(world)
+        player.draw(world)
+
+        # 使鏡頭平滑移動
+        cam.center += (tank.pos-cam.center) * 0.1
+
+        # 限制移動邊界
+        cam.x = min(max(cam.x, 0), world_w-cam.w) 
+        cam.y = min(max(cam.y, 0), world_h-cam.h)
+
+        # 建立要顯示給玩家的畫面
+        screen.blit(world.subsurface(cam), (0,0))
+        
+        # 於右下角顯示剩餘子彈數
+        text = "x" + str(tank.num_of_bullets)
+        font = pygame.font.SysFont("impact", 40)
+        font_surf = font.render(text, True, BLACK)
+        x = 1700
+        y = 500
+        screen.blit(font_surf, (x,y))
+        font_surf = font.render(text, True, WHITE)
+        x -= 3
+        y -= 3
+        screen.blit(font_surf, (x,y))
+
+        
         # player_scr = pygame.surfarray.array2d(player_scr)
         # data = pickle.dumps(player_scr)
         # conn.sendall(data)
         # print("伺服器已回應玩家")
 
         # 設定每秒144幀
-            
+        clock.tick(144)
+        pygame.display.update()        
                 # except Exception as e:
                 #     print(e)
                 #     conn.close()
@@ -508,4 +495,5 @@ if __name__ == "__main__":
                 #     break
 
 
+pygame.quit()
 # sys.exit()

@@ -12,4 +12,4 @@ DARK_YELLOW = (190, 176, 78)
 GRAY = (157, 157, 157)
 
 # Address Family：可以選擇 AF_INET（用於 Internet 程序間通訊） 或者 AF_UNIX（用於同一臺機器程序間通訊）
-# Type：套接字型別，可以是 SOCKET_STREAM（流式套接字，主要用於 TCP 協議）或者SOCKET_DGRAM（資料包套接字，主要用於 UDP 協議）
+# Type：套接字型別，可以是 SOCKET_STREAM（流式套接字，主要用於 TCP 協議）或者SOCKET_DGRAM（資料包套接字，主要用於 UDP 協議）# self.cam.center = tank.pos
