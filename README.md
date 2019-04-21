@@ -1,3 +1,5 @@
+![demo.gif](https://github.com/sunrimii/diepy/blob/master/demo.gif?raw=true)
+
 # 遊戲方式
 
 執行`diepy.py`即直接開始遊戲
