@@ -1,22 +1,12 @@
-import socket
-import pygame
+import socketserver
 
-
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-    sock.bind(("127.0.0.1", 5278))
-    sock.listen(1)
-    conn, addr = sock.accept()
-    with conn:
-
-
-
-        data = b""
+class Handler(socketserver.BaseRequestHandler):
+    def handle(self):
         while True:
-            data += conn.recv(2)
-            if b"END" in data:
-                break
-        print(data.decode())
+            self.data = self.request.recv(5)
+            print("recv ok")
+            self.request.sendall(self.data)
+            print("send ok")
 
-
-        data = "來自伺服器的訊息END".encode()
-        conn.sendall(data)
+with socketserver.TCPServer(("localhost", 5278), Handler) as server:
+    server.serve_forever()

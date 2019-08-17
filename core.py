@@ -1,7 +1,6 @@
+import os
 from random import randrange, choice
 from math import atan2, degrees, ceil
-import pickle
-import zlib
 
 import pygame
 import pygame.freetype
@@ -15,7 +14,7 @@ COLOR_OF_HP = (100, 200, 100)
 
 
 class Tank(pygame.sprite.Sprite):
-    def __init__(self, group, img):
+    def __init__(self, group, color, pos):
         super().__init__()
         
         # 可升級的能力值
@@ -26,7 +25,7 @@ class Tank(pygame.sprite.Sprite):
         self.max_speed = 2.3
 
         self.hp = 20
-        self.damage = 12345
+        self.damage = 10
         
         self.pos = (randrange(SIZE_OF_SLOWZONE,SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE), randrange(SIZE_OF_SLOWZONE,SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE))
         self.pos = pygame.math.Vector2(self.pos)
@@ -42,9 +41,6 @@ class Tank(pygame.sprite.Sprite):
         self.IMG = img
         self.image = self.IMG["1.0"]
         self.rect = self.image.get_rect(center=self.pos)
-        
-        self.cam = pygame.Rect(0, 0, 1920, 1080)
-        self.cam.center = self.rect.center
         
     def update(self, event):
         pressed_keys, is_click, pos_of_mouse = event
@@ -162,7 +158,7 @@ class Tank(pygame.sprite.Sprite):
         #             bullet_pack.is_alive = False
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, IMG, pos, degs, damage, speed):
+    def __init__(self, material, pos, degs, damage, speed):
         super().__init__()
         
         # 可升級的能力
@@ -171,10 +167,10 @@ class Bullet(pygame.sprite.Sprite):
         
         self.hp = 1
         
-        self.image = IMG["bullet"].copy()
+        self.image = material["bullet"].copy()
         self.image.set_colorkey(BLACK)
         self.image.set_alpha(0)
-        self.mask = IMG["mask_of_bullet"]
+        self.mask = material["bullet_mask"]
         
         # 將起始位置從坦克中心移至砲口
         offset = pygame.math.Vector2(self.speed)
@@ -217,76 +213,113 @@ class Bullet(pygame.sprite.Sprite):
         #             enemy.hp -= 1
         #             #do something
 
-class Game:
-    def init_server(self):
-        pygame.display.set_mode((1920,1080))
-        self.player = {}
-        self.clock = pygame.time.Clock()
-
-    def init_client(self):
+class Diepy:
+    def __init__(self):
+        self.is_running = True
+        
+        # 初始化螢幕
         pygame.display.set_caption("Diepy")
         icon = pygame.image.load("icon.png")
         pygame.display.set_icon(icon)
         self.screen = pygame.display.set_mode((1920, 1080))
-        self.is_running = True
 
-    def add_player(self, addr):
-        self.player[addr] = {}
-        self.player[addr]["bullets"] = pygame.sprite.Group()
-        group = self.player[addr]["bullets"]
-        color = choice(self.remaining_color)
-        tank = Tank(group, color)
-        self.player[addr]["tank"] = pygame.sprite.GroupSingle(tank)
+    def init_single(self):
+        # 初始化精靈組用於更新精靈
+        self.group = pygame.sprite.Group()
+
+        # 初始化時鐘用於限制刷新率
+        self.clock = pygame.time.Clock()
+
+    def init_server(self):
+        # 初始化精靈組用於更新精靈 {地址: 精靈組(坦克和所有子彈), ...}
+        self.groups = {}
+        
+        # 尚未使用的顏色
+        self.remaining_color = ["red", "yellow", "green", "blue"]
+
+        # 初始化時鐘用於限制刷新率
+        self.clock = pygame.time.Clock()
+
+    def select_mode(self):
+        mode = "single"
+
+        return mode
+
+    def add_player(self, addr=None):
+        # 隨機初始位置
+        pos = (randrange(SIZE_OF_SLOWZONE,SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE), randrange(SIZE_OF_SLOWZONE,SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE))
+        
+        # 多人模式
+        if addr:
+            # 初始化精靈組
+            self.groups[addr] = pygame.sprite.Group()
+            
+            # 分配顏色
+            color = choice(self.remaining_color)
+            self.remaining_color.remove(color)
+        
+            # 初始化坦克
+            tank = Tank(self.groups[addr], color, pos)
+            self.groups[addr].add(tank)
+        
+        # 單人模式
+        else:
+            # 初始化坦克
+            tank = Tank(self.groups[addr], "blue", pos)
+            self.group.add(tank)
+
+            # 初始化鏡頭用於跟蹤坦克
+            self.cam = pygame.Rect(0, 0, 1920, 1080)
+            self.cam.center = pos
+        
         # 預設輸入事件 使精靈組初始得以更新
-        self.player[addr]["event"] = (0,)*323, False, (0,0)
+        self.groups[addr]["event"] = (0,)*323, False, (0,0)
         
-    def load_material(self):
+    def load_materials(self):
+        # 若素材不存在則產生
+        if not os.path.isdir():
+            import material
+        
+        self.materials = {}
+        
         # 載入戰場
-        self.BATTLEFIELD = pygame.image.load("material/battlefield.png").convert()
+        self.materials["battlefield"] = pygame.image.load("material/battlefield.png").convert()
         
-        # 背景用於更新畫面
-        self.BG = self.BATTLEFIELD.copy()
+        # 載入背景用於更新畫面
+        self.materials["background"] = self.materials["battlefield"].copy()
         
-        # 載入坦克和子彈
-        self.RED_IMG = {}
-        self.RED_IMG["1.0"] =    pygame.image.load(f"material/RED-tank-1.0.png").convert()
-        self.RED_IMG["0.96"] =   pygame.image.load(f"material/RED-tank-0.96.png").convert()
-        self.RED_IMG["0.92"] =   pygame.image.load(f"material/RED-tank-0.92.png").convert()
-        self.RED_IMG["0.88"] =   pygame.image.load(f"material/RED-tank-0.88.png").convert()
-        self.RED_IMG["0.84"] =   pygame.image.load(f"material/RED-tank-0.84.png").convert()
-        self.RED_IMG["bullet"] = pygame.image.load(f"material/RED-bullet.png").convert()
-        self.YELLOW_IMG = {}
-        self.YELLOW_IMG["1.0"] =    pygame.image.load(f"material/yellow-tank-1.0.png").convert()
-        self.YELLOW_IMG["0.96"] =   pygame.image.load(f"material/yellow-tank-0.96.png").convert()
-        self.YELLOW_IMG["0.92"] =   pygame.image.load(f"material/yellow-tank-0.92.png").convert()
-        self.YELLOW_IMG["0.88"] =   pygame.image.load(f"material/yellow-tank-0.88.png").convert()
-        self.YELLOW_IMG["0.84"] =   pygame.image.load(f"material/yellow-tank-0.84.png").convert()
-        self.YELLOW_IMG["bullet"] = pygame.image.load(f"material/yellow-bullet.png").convert()
-        self.GREEN_IMG = {}
-        self.GREEN_IMG["1.0"] =    pygame.image.load(f"material/green-tank-1.0.png").convert()
-        self.GREEN_IMG["0.96"] =   pygame.image.load(f"material/green-tank-0.96.png").convert()
-        self.GREEN_IMG["0.92"] =   pygame.image.load(f"material/green-tank-0.92.png").convert()
-        self.GREEN_IMG["0.88"] =   pygame.image.load(f"material/green-tank-0.88.png").convert()
-        self.GREEN_IMG["0.84"] =   pygame.image.load(f"material/green-tank-0.84.png").convert()
-        self.GREEN_IMG["bullet"] = pygame.image.load(f"material/green-bullet.png").convert()
-        self.BLUE_IMG = {}
-        self.BLUE_IMG["1.0"] =    pygame.image.load(f"material/blue-tank-1.0.png").convert()
-        self.BLUE_IMG["0.96"] =   pygame.image.load(f"material/blue-tank-0.96.png").convert()
-        self.BLUE_IMG["0.92"] =   pygame.image.load(f"material/blue-tank-0.92.png").convert()
-        self.BLUE_IMG["0.88"] =   pygame.image.load(f"material/blue-tank-0.88.png").convert()
-        self.BLUE_IMG["0.84"] =   pygame.image.load(f"material/blue-tank-0.84.png").convert()
-        self.BLUE_IMG["bullet"] = pygame.image.load(f"material/blue-bullet.png").convert()
+        # 載入坦克
+        self.materials["red-tank-1.0"] =  pygame.image.load(f"material/red-tank-1.0.png").convert()
+        self.materials["red-tank-0.96"] = pygame.image.load(f"material/red-tank-0.96.png").convert()
+        self.materials["red-tank-0.92"] = pygame.image.load(f"material/red-tank-0.92.png").convert()
+        self.materials["red-tank-0.88"] = pygame.image.load(f"material/red-tank-0.88.png").convert()
+        self.materials["red-tank-0.84"] = pygame.image.load(f"material/red-tank-0.84.png").convert()
+        self.materials["yellow-tank-1.0"] =  pygame.image.load(f"material/yellow-tank-1.0.png").convert()
+        self.materials["yellow-tank-0.96"] = pygame.image.load(f"material/yellow-tank-0.96.png").convert()
+        self.materials["yellow-tank-0.92"] = pygame.image.load(f"material/yellow-tank-0.92.png").convert()
+        self.materials["yellow-tank-0.88"] = pygame.image.load(f"material/yellow-tank-0.88.png").convert()
+        self.materials["yellow-tank-0.84"] = pygame.image.load(f"material/yellow-tank-0.84.png").convert()
+        self.materials["green-tank-1.0"] =  pygame.image.load(f"material/green-tank-1.0.png").convert()
+        self.materials["green-tank-0.96"] = pygame.image.load(f"material/green-tank-0.96.png").convert()
+        self.materials["green-tank-0.92"] = pygame.image.load(f"material/green-tank-0.92.png").convert()
+        self.materials["green-tank-0.88"] = pygame.image.load(f"material/green-tank-0.88.png").convert()
+        self.materials["green-tank-0.84"] = pygame.image.load(f"material/green-tank-0.84.png").convert()
+        self.materials["blue-tank-1.0"] =  pygame.image.load(f"material/blue-tank-1.0.png").convert()
+        self.materials["blue-tank-0.96"] = pygame.image.load(f"material/blue-tank-0.96.png").convert()
+        self.materials["blue-tank-0.92"] = pygame.image.load(f"material/blue-tank-0.92.png").convert()
+        self.materials["blue-tank-0.88"] = pygame.image.load(f"material/blue-tank-0.88.png").convert()
+        self.materials["blue-tank-0.84"] = pygame.image.load(f"material/blue-tank-0.84.png").convert()
 
-        # 碰撞檢測用
-        self.RED_IMG["mask_of_bullet"] = pygame.mask.from_surface(self.BLUE_IMG["bullet"])
-        self.YELLOW_IMG["mask_of_bullet"] = self.RED_IMG["mask_of_bullet"]
-        self.GREEN_IMG["mask_of_bullet"] = self.RED_IMG["mask_of_bullet"]
-        self.BLUE_IMG["mask_of_bullet"] = self.RED_IMG["mask_of_bullet"]
+        # 載入子彈
+        self.materials["red-bullet"] =    pygame.image.load(f"material/red-bullet.png").convert()
+        self.materials["yellow-bullet"] = pygame.image.load(f"material/yellow-bullet.png").convert()
+        self.materials["green-bullet"] =  pygame.image.load(f"material/green-bullet.png").convert()
+        self.materials["blue-bullet"] =   pygame.image.load(f"material/blue-bullet.png").convert()
 
-        # 分配玩家顏色用
-        self.remaining_color = [self.RED_IMG, self.YELLOW_IMG, self.GREEN_IMG, self.BLUE_IMG]
+        # 載入子彈遮罩用於碰撞檢測
+        self.materials["bullet-mask"] = pygame.mask.from_surface(self.materials["red-bullet"])
 
-    def get_event(self):
+    def get_events(self):
         pressed_keys = pygame.key.get_pressed()
         is_click = pygame.mouse.get_pressed()[0]
         pos_of_mouse = pygame.mouse.get_pos()
@@ -305,39 +338,42 @@ class Game:
         return event
 
     def handle_event(self, addr, event):
-        event = pickle.loads(event)
         self.player[addr]["event"] = event
 
-    def run_logic(self):
+    def run_logic(self, events):
         for each in self.player.values():
             # 更新精靈
             each["tank"].update(each["event"])
             each["bullets"].update()
-            # 復原戰場
-            each["tank"].clear(self.BATTLEFIELD, self.BG)
-            each["bullets"].clear(self.BATTLEFIELD, self.BG)
-            # 重畫戰場
-            each["tank"].draw(self.BATTLEFIELD) 
-            each["bullets"].draw(self.BATTLEFIELD) 
 
+        
+        
+
+    def update_screen(self, drawinfo=None):
+        """更新螢幕畫面"""
+        battlefield = self.materials["battlefield"]
+        background = self.materials["background"]
+        
+        if drawinfo:
+            for name, rect, alpha in drawinfo:
+                image = self.materials[name]
+                image.set_alpha(alpha)
+                battlefield.blit(image, rect)
+        
+        else:
+            self.group.clear(battlefield, background) 
+            self.group.draw(battlefield) 
+            
+        surface = battlefield.subsurface(self.cam)
+        self.screen.blit(surface, (0,0))
+        
         # 設定刷新率
         self.clock.tick(144)
-
-    def get_screen_data(self, addr):
-        # 將戰場切出鏡頭所需的畫面
-        surface = self.BATTLEFIELD.subsurface(self.player[addr]["tank"].sprite.cam)
-        # 畫面轉位元組
-        string = pygame.image.tostring(surface, "RGB")
-        # 壓縮
-        data = zlib.compress(string)
-
-        return data
-
-    def parse_screen_data(self, data):
-        # 解壓縮
-        string = zlib.decompress(data)
-        # 位元組轉畫面
-        surface = pygame.image.frombuffer(string, (1920,1080), "RGB")
-        # 更新螢幕
-        self.screen.blit(surface, (0,0))
         pygame.display.update()
+
+        # 為下一張預先清除畫面
+        if drawinfo:
+            for _, rect, _ in drawinfo:
+                background = background.subsurface(rect)
+                topleft = rect[:2]
+                battlefield.blit(background, topleft)
