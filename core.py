@@ -349,7 +349,7 @@ class Diepy:
         
         
 
-    def update_screen(self, drawinfo=None):
+    def update_screen(self, drawinfo=None, cam=None):
         """更新螢幕畫面"""
         battlefield = self.materials["battlefield"]
         background = self.materials["background"]
