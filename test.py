@@ -6,6 +6,8 @@
 # print(rect)
 # print(pickle.dumps(rect))
 
-import os
-
-print(os.path.isdir("log"))
+a=[1,2,3]
+d={"a":a}
+print(d.values()[0])
+d.values()[0][0] = 0
+print(d.values()[0])

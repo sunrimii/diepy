@@ -1,3 +1,4 @@
+import socket
 import socketserver
 import zlib
 import pickle
@@ -10,8 +11,8 @@ class Server(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
 
 class Handler(socketserver.BaseRequestHandler):
-    def _recv_events(self):
-        # 接收資料
+    def _recv(self):
+        # 接收資料 可以改 玩家斷線
         data = b""
         while True:
             data += self.request.recv(1024)
@@ -22,13 +23,13 @@ class Handler(socketserver.BaseRequestHandler):
         # 解壓縮
         data = zlib.decompress(data)
         # 反序列化
-        events = pickle.loads(data)
-    
-        return events
+        data = pickle.loads(data)
 
-    def _send_drawinfo(self, drawinfo):
+        return data
+
+    def _sendall(self, data):
         # 序列化
-        data = pickle.dumps(drawinfo)
+        data = pickle.dumps(data)
         # 壓縮
         data = zlib.compress(data)
         # 加上結束標記
@@ -37,12 +38,16 @@ class Handler(socketserver.BaseRequestHandler):
         self.request.sendall(data)
 
     def handle(self):
-        events = self._recv_events()
+        data = self._recv()
         # 處理
         # drawinfo = ...
-        self._send_drawinfo(drawinfo)
+        self._sendall(data)
 
 
 class Client:
-    def __init__(self):
-        
+    def __init__(self, addr, port):
+        self.addr = addr
+        self.port = port
+
+
+def Server():
