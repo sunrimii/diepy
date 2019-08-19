@@ -1,13 +1,6 @@
-# import pygame
-# import pickle
+class A:
+    def __init__(self):
+        self.b = 1
 
-
-# rect = pygame.Rect(0,0,1,1)
-# print(rect)
-# print(pickle.dumps(rect))
-
-a=[1,2,3]
-d={"a":a}
-print(d.values()[0])
-d.values()[0][0] = 0
-print(d.values()[0])
+if hasattr(A(), "b"):
+    print(1)
