@@ -87,13 +87,9 @@ class Handler(socketserver.BaseRequestHandler):
             del self.server.cams[self.client_address]
 
 class Client:
-    def __init__(self, addr, game):
+    def __init__(self, addr):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect(addr)
-
-        self.game = game
-
-        self.is_shutdown = True
 
     def __enter__(self):
         return self
@@ -126,19 +122,3 @@ class Client:
         data += EOF
         # 傳送資料
         self.sock.sendall(data)
-
-    def connect_forever(self):
-        # 客戶端循環
-        while self.is_shutdown:
-            # 傳送輸入事件給分支伺服器
-            event = self.game.get_event()
-            self.sendall_(event)
-            
-            # 等待分支伺服器傳來繪製位置和鏡頭位置
-            self.drawinfo, self.cam = self.recv_()
-            
-            self.game.update_screen(self.drawinfo, self.cam)
-
-
-    def shutdown(self):
-        self.is_shutdown = False

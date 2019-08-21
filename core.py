@@ -11,9 +11,9 @@ class Tank(pygame.sprite.Sprite):
         
         # 可升級的能力值
         self.num_of_barrel = 1
-        self.reloading_time = 1
+        self.reloading_time = 0.05
         self.damage_of_bullet = 1
-        self.speed_of_bullet = 3.5
+        self.speed_of_bullet = 1
         self.max_speed = 2.3
 
         self.hp = 20
@@ -27,6 +27,8 @@ class Tank(pygame.sprite.Sprite):
         
         # self.pos = pygame.math.Vector2(pos[0], pos[1])
         self.pos = pygame.math.Vector2(*pos)
+        # 測試用
+        self.pos = pygame.math.Vector2(500,500)
 
         self.speed = pygame.math.Vector2(0, 0)
         self.acc = 0.01
@@ -65,6 +67,7 @@ class Tank(pygame.sprite.Sprite):
         if (not self.is_reloading) and is_click:
             self.is_reloading = True
             self.time_of_attacking = pygame.time.get_ticks()
+            
             if self.num_of_barrel == 1:
                 bullet = Bullet(self.color, self.pos, self.image_degs, self.damage_of_bullet, self.speed_of_bullet)
                 self.bullets.add(bullet)
@@ -119,7 +122,6 @@ class Tank(pygame.sprite.Sprite):
             self.image_key = f"{self.color}-tank-1.0"
 
         self.image = pygame.transform.rotate(MATERIALS[self.image_key], self.image_degs)
-        self.image.set_colorkey(BLACK)
         
         # 碰撞檢測用
         self.mask = pygame.mask.from_surface(self.image)
@@ -133,6 +135,7 @@ class Tank(pygame.sprite.Sprite):
             self.speed.y /= 1.01
         elif abs(self.speed.y) > 0:
             self.speed.y = 0
+        
         # 左右加速度
         if pressed_keys[pygame.K_a]:
             self.speed -= (self.acc, 0)
@@ -241,32 +244,22 @@ class Diepy:
         pygame.init()
         self.is_running = True
         
-        # 初始化螢幕
+        # 初始化畫面
         pygame.display.set_caption("Diepy")
         icon = pygame.image.load("icon.png")
         pygame.display.set_icon(icon)
-        self.screen = pygame.display.set_mode((1920, 1080))
+        self.display = pygame.display.set_mode((1920, 1080))
         
-        # 初始化時鐘用於限制刷新率
+        # 初始化時鐘用於限制刷新率上限
         self.clock = pygame.time.Clock()
     
     def load_materials(self):
         for image_key in MATERIALS:
             MATERIALS[image_key] = MATERIALS[image_key].convert()
-            
-        MATERIALS["red-bullet"].set_colorkey(BLACK)
-        MATERIALS["yellow-bullet"].set_colorkey(BLACK)
-        MATERIALS["green-bullet"].set_colorkey(BLACK)
-        MATERIALS["blue-bullet"].set_colorkey(BLACK)
 
-        MATERIALS["red-bullet"].set_alpha(0)
-        MATERIALS["yellow-bullet"].set_alpha(0)
-        MATERIALS["green-bullet"].set_alpha(0)
-        MATERIALS["blue-bullet"].set_alpha(0)
- 
         # 遮罩用於碰撞檢測
         MATERIALS["bullet-mask"] = pygame.mask.from_surface(MATERIALS["red-bullet"])
-    
+
     def init_single(self):
         # 初始化精靈組用於更新精靈
         self.tank = pygame.sprite.GroupSingle()
@@ -377,11 +370,6 @@ class Diepy:
         # 伺服器用
         if hasattr(self, "tanks"):
             for tank in self.tanks.values():
-                # 先清除
-                tank.clear(MATERIALS["battlefield"], MATERIALS["background"])
-                tank.sprite.bullets.clear(MATERIALS["battlefield"], MATERIALS["background"])
-
-                # 再畫
                 tank.draw(MATERIALS["battlefield"])
                 tank.sprite.bullets.draw(MATERIALS["battlefield"])
         
@@ -403,33 +391,38 @@ class Diepy:
                 
                 if no_transform:
                     image = MATERIALS[key]
-                    
+
                 image.set_alpha(alpha)
 
                 MATERIALS["battlefield"].blit(image, topleft)
         
         # 單人模式用
         else:
-            # 先清除
-            self.tank.clear(MATERIALS["battlefield"], MATERIALS["background"])
-            self.tank.sprite.bullets.clear(MATERIALS["battlefield"], MATERIALS["background"])
-
-            # 再畫
             self.tank.draw(MATERIALS["battlefield"])
             self.tank.sprite.bullets.draw(MATERIALS["battlefield"])
 
             cam = self.tank.sprite.cam
 
         # 公用
-        self.screen.blit(MATERIALS["battlefield"], (0,0), cam)
+        self.display.blit(MATERIALS["battlefield"], (0,0), cam)
         self.clock.tick(144)
         pygame.display.update()
 
+        # 伺服器用
+        if hasattr(self, "tanks"):
+            # 為下一張預先清除畫面
+            for tank in self.tanks.values():
+                tank.sprite.bullets.clear(MATERIALS["battlefield"], MATERIALS["background"])
+                tank.clear(MATERIALS["battlefield"], MATERIALS["background"])
+        
         # 客戶端用
-        if drawinfo:
+        elif drawinfo:
             # 為下一張預先清除畫面
             for _, rect, topleft, _, _ in drawinfo:
-                # sub_background = MATERIALS["background"].subsurface(rect)
-                # topleft = rect[:2]
-                # MATERIALS["battlefield"].blit(sub_background, topleft)
                 MATERIALS["battlefield"].blit(MATERIALS["background"], topleft, rect)
+        
+        # 單人模式用
+        else:
+            # 為下一張預先清除畫面
+            self.tank.clear(MATERIALS["battlefield"], MATERIALS["background"])
+            self.tank.sprite.bullets.clear(MATERIALS["battlefield"], MATERIALS["background"])

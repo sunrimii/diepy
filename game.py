@@ -6,7 +6,7 @@ if __name__ == "__main__":
     diepy.load_materials()
     
     mode = diepy.select_mode()
-    mode = "client"
+    mode = "single"
 
     if mode == "single":
         diepy.init_single()
@@ -61,6 +61,7 @@ if __name__ == "__main__":
 
             pygame.quit()
             server.shutdown()
+    
     elif mode == "client":
         import threading
         import time
@@ -70,25 +71,16 @@ if __name__ == "__main__":
 
         host="127.0.0.1"
         port=5278
-        # with Client((host, port), diepy) as client:
-            # client_thread = threading.Thread(target=client.connect_forever)
-            # client_thread.daemon = True # 主執行緒關閉時也關閉其他所有執行緒
-            # client_thread.start()
-
-            # # 主循環
-            # while diepy.is_running:
-            #     # 等待分支伺服器傳來繪製位置和鏡頭位置
-            #     while (client.drawinfo is None) or (client.cam is None):
-            #         time.sleep(0.00001)
+        with Client((host, port)) as client:
+            # 客戶端主循環
+            while diepy.is_running:
+                # 傳送輸入事件給分支伺服器
+                event = diepy.get_event()
+                client.sendall_(event)
                 
-            #     # 客戶端更新螢幕
-            #     diepy.update_screen(client.drawinfo, client.cam)
-
-            #     # 
-            #     client.drawinfo = None
-            #     client.cam = None
-
-            # pygame.quit()
-            # client.shutdown()
-        client = Client((host, port), diepy)
-        client.connect_forever()
+                # 等待分支伺服器傳來繪製位置和鏡頭位置
+                drawinfo, cam = client.recv_()
+                
+                diepy.update_screen(drawinfo, cam)
+            
+            pygame.quit()
