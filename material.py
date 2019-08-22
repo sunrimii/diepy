@@ -1,8 +1,6 @@
 import os
 
 import pygame
-import pygame.gfxdraw
-import pygame.freetype
 import numpy as np
 
 
@@ -38,7 +36,8 @@ DARK_BROWN = (99, 62, 41)
 
 
 def draw_battlefield():
-    battlefield = pygame.Surface((SIZE_OF_BATTLEFIELD, SIZE_OF_BATTLEFIELD))
+    size = (SIZE_OF_BATTLEFIELD, SIZE_OF_BATTLEFIELD)
+    battlefield = pygame.Surface(size)
     battlefield.fill(COLOR_OF_SLOWZONE)
     
     rect = (SIZE_OF_SLOWZONE, SIZE_OF_SLOWZONE, SIZE_OF_BATTLEFIELD-2*SIZE_OF_SLOWZONE, SIZE_OF_BATTLEFIELD-2*SIZE_OF_SLOWZONE)
@@ -186,9 +185,13 @@ for color in ("red", "green", "blue", "purple"):
     MATERIALS[f"{color}-tank-0.88"] = pygame.image.load(f"material/{color}-tank-0.88.png")
     MATERIALS[f"{color}-tank-0.84"] = pygame.image.load(f"material/{color}-tank-0.84.png")
     MATERIALS[f"{color}-bullet"] =    pygame.image.load(f"material/{color}-bullet.png")
-    
-    # 將初始狀態設為透明使子彈淡入
-    MATERIALS[f"{color}-bullet"].set_alpha(0)
+
+# 載入母艦
+MATERIALS["mothership-1.0"] =  pygame.image.load(f"material/mothership-1.0.png")
+MATERIALS["mothership-0.96"] = pygame.image.load(f"material/mothership-0.96.png")
+MATERIALS["mothership-0.92"] = pygame.image.load(f"material/mothership-0.92.png")
+MATERIALS["mothership-0.88"] = pygame.image.load(f"material/mothership-0.88.png")
+MATERIALS["mothership-0.84"] = pygame.image.load(f"material/mothership-0.84.png")
 
 # 將剩餘黑色設為透明
 for image_key in MATERIALS:
