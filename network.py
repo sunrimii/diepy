@@ -14,13 +14,11 @@ class Server(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
         self.game = game
         self.game.init_server()
-        self.game.add_player(self.server_address, serverself=True)
+        self.game.add_tank(self.server_address, serverself=True)
 
         self.maxnum_of_tanks = 4
 
         self.events = {}
-        # self.drawinfo = None
-        # self.cams = None
         
     # def server_activate(self):
     #     self.socket.listen(self.request_queue_size)
@@ -68,7 +66,7 @@ class Handler(socketserver.BaseRequestHandler):
             if not has_verified:
                 # 檢查輸入事件是否符合格式
                 if isinstance(event, tuple) and len(event) == 3:
-                    self.server.game.add_player(self.client_address)
+                    self.server.game.add_tank(self.client_address)
                     has_verified = True
 
                 else:

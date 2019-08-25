@@ -4,24 +4,23 @@ from core import Diepy
 if __name__ == "__main__":
     diepy = Diepy()
     diepy.load_materials()
-    
-    mode = diepy.select_mode()
-    mode = "single"
+    diepy.select_mode()
 
-    if mode == "single":
-        diepy.init_single()
-        diepy.add_player()
-        
+    if diepy.mode == "single":
+        diepy.add_tank()
+        diepy.add_mothership()
         while diepy.is_running:
+            diepy.add_cross()
             event = diepy.get_event()
             diepy.run_logic(event)
             diepy.update_screen()
 
-    elif mode == "server":
+    elif diepy.mode == "server":
         import threading
         import time
 
         from network import Server, Handler
+
 
         host="127.0.0.1"
         port=5278
@@ -35,6 +34,8 @@ if __name__ == "__main__":
             while len(server.game.tanks) < 2:
                 time.sleep(0.00001)
             
+            diepy.add_mothership()
+            
             # 伺服器循環
             while diepy.is_running:
                 # 伺服器自己傳送輸入事件
@@ -45,6 +46,7 @@ if __name__ == "__main__":
                     time.sleep(0.00001)
 
                 # 處理遊戲邏輯
+                diepy.add_cross()
                 diepy.run_logic(server.events)
                 server.drawinfo = diepy.get_drawinfo()
                 server.cams = diepy.get_cams()
@@ -62,7 +64,7 @@ if __name__ == "__main__":
             pygame.quit()
             server.shutdown()
     
-    elif mode == "client":
+    elif diepy.mode == "client":
         import threading
         import time
 

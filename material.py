@@ -1,7 +1,7 @@
 import os
 
 import pygame
-import numpy as np
+import pygame.gfxdraw
 
 
 SIZE_OF_BATTLEFIELD = 5000
@@ -9,12 +9,13 @@ SIZE_OF_SLOWZONE = 300
 SIZE_OF_TANK = 140
 SIZE_OF_BULLET = 35
 SIZE_OF_MOTHERSHIP = 350
+SIZE_OF_LITTLESHIP = 40
+SIZE_OF_CROSS = 60
 
 COLOR_OF_BATTLEFIELD = (205, 205, 205)
 COLOR_OF_GRID = (215, 215, 215)
 COLOR_OF_SLOWZONE = (210, 210, 210)
 COLOR_OF_HP = (100, 200, 100)
-COLOR_OF_MOTHERSHIP = (100, 200, 100)
 
 BLACK = (0, 0, 0)
 
@@ -49,16 +50,15 @@ def draw_battlefield():
     for y in range(0, SIZE_OF_BATTLEFIELD, 25):
         pygame.gfxdraw.box(battlefield, (0,y,SIZE_OF_BATTLEFIELD,2), COLOR_OF_GRID)
 
-    pygame.image.save(battlefield, "material/battlefield.png")
+    pygame.image.save(battlefield, "materials/battlefield.png")
 
 def draw_tank_and_bullet():
     for color, body_color, border_color in (("blue",BLUE,DARK_BLUE), ("purple",PURPLE,DARK_PURPLE), ("red",RED,DARK_RED), ("green",GREEN,DARK_GREEN)):
-        for scale_of_barrel in np.arange(1.0, 0.8, -0.04):
-            scale_of_barrel = round(scale_of_barrel, 2)
+        for scale_of_barrel in (1.00, 0.96, 0.92, 0.88, 0.84):
 
             tank = pygame.Surface((SIZE_OF_TANK, SIZE_OF_TANK))
             
-            border = SIZE_OF_TANK // 25
+            border = SIZE_OF_TANK // 35
             
             # 坦克砲管
             # 砲管以水平開口朝右繪製 再根據滑鼠旋轉
@@ -87,7 +87,7 @@ def draw_tank_and_bullet():
             r -= border
             pygame.gfxdraw.filled_circle(tank, x, y, r, body_color)
 
-            pygame.image.save(tank, f"material/{color}-tank-{scale_of_barrel}.png")
+            pygame.image.save(tank, f"materials/{color}-tank-{scale_of_barrel}.png")
 
         # 子彈
         bullet = pygame.Surface((SIZE_OF_BULLET, SIZE_OF_BULLET))
@@ -95,28 +95,28 @@ def draw_tank_and_bullet():
         y = SIZE_OF_BULLET // 2
         r = x
         pygame.gfxdraw.filled_circle(bullet, x, y, r, border_color)
-        border = SIZE_OF_BULLET // 7
+        border = SIZE_OF_BULLET // 10
         r -= border
         pygame.gfxdraw.filled_circle(bullet, x, y, r, body_color)
 
-        pygame.image.save(bullet, f"material/{color}-bullet.png")
+        pygame.image.save(bullet, f"materials/{color}-bullet.png")
 
 def draw_mothership():
     num_of_edge = 12
     
-    border = SIZE_OF_MOTHERSHIP / 50
+    border = SIZE_OF_MOTHERSHIP / 80
 
     angle = 360 / num_of_edge
     angle_offset = angle / 2
 
     center = (SIZE_OF_MOTHERSHIP / 2, SIZE_OF_MOTHERSHIP / 2)
 
-    for scale_of_barrel in np.arange(1.0, 0.8, -0.04):
+    for scale_of_barrel in (1.00, 0.96, 0.92, 0.88, 0.84):
         mothership = pygame.Surface((SIZE_OF_MOTHERSHIP, SIZE_OF_MOTHERSHIP))
 
         # 母艦砲管
         scale_of_barrel = round(scale_of_barrel, 2)
-        w = SIZE_OF_MOTHERSHIP / 2.2 * scale_of_barrel * 1.08
+        w = SIZE_OF_MOTHERSHIP / 2.2 * (scale_of_barrel ** 0.5)
         h = SIZE_OF_MOTHERSHIP / num_of_edge * 2
         x = 0
         y = -h / 2
@@ -158,42 +158,154 @@ def draw_mothership():
         pygame.gfxdraw.filled_polygon(mothership, outerbody, DARK_BROWN)
         pygame.gfxdraw.filled_polygon(mothership, innerbody, BROWN)
 
-        pygame.image.save(mothership, f"material/mothership-{scale_of_barrel}.png")
+        pygame.image.save(mothership, f"materials/mothership-{scale_of_barrel}.png")
 
+def draw_trigonship():
+    trigonship = pygame.Surface((SIZE_OF_LITTLESHIP, SIZE_OF_LITTLESHIP))
+
+    x1 = 0
+    y1 = 0
+    x2 = 0
+    y2 = SIZE_OF_LITTLESHIP
+    x3 = SIZE_OF_LITTLESHIP
+    y3 = SIZE_OF_LITTLESHIP // 2
+
+    pygame.gfxdraw.filled_trigon(trigonship, x1, y1, x2, y2, x3, y3, DARK_BROWN)
+    
+    border = SIZE_OF_LITTLESHIP // 12
+
+    x1 += border
+    y1 += 2 * border
+    x2 += border
+    y2 -= 2 * border
+    x3 -= 5 * border // 2
+    y3 = y3
+
+    pygame.gfxdraw.filled_trigon(trigonship, x1, y1, x2, y2, x3, y3, BROWN)
+
+    pygame.image.save(trigonship, "materials/trigonship.png")
+
+def draw_squareship():
+    squareship = pygame.Surface((SIZE_OF_LITTLESHIP, SIZE_OF_LITTLESHIP))
+    squareship.fill(DARK_BROWN)
+    border = 5
+    x = border
+    y = border
+    w = SIZE_OF_LITTLESHIP - 2*border
+    h = SIZE_OF_LITTLESHIP - 2*border
+    pygame.gfxdraw.box(squareship, (x,y,w,h), BROWN)
+    pygame.image.save(squareship, "materials/squareship.png")
+
+def draw_pentagonship():
+    pentagonship = pygame.Surface((SIZE_OF_LITTLESHIP, SIZE_OF_LITTLESHIP))
+    v = pygame.math.Vector2(SIZE_OF_LITTLESHIP/2, 0)
+    center = [SIZE_OF_LITTLESHIP/2, SIZE_OF_LITTLESHIP/2]
+
+    pnts = [v.rotate(angle)+center for angle in range(0, 360, 360//5)]
+    pygame.gfxdraw.filled_polygon(pentagonship, pnts, DARK_BROWN)
+
+    border = SIZE_OF_LITTLESHIP / 10
+    v -= (border, 0)
+
+    pnts = [v.rotate(angle)+center for angle in range(0, 360, 360//5)]
+    pygame.gfxdraw.filled_polygon(pentagonship, pnts, BROWN)
+
+    pygame.image.save(pentagonship, "materials/pentagonship.png")
+
+def draw_cross():
+    cross = pygame.Surface((SIZE_OF_CROSS, SIZE_OF_CROSS))
+
+    x = SIZE_OF_CROSS // 4
+    y = 0
+    w = SIZE_OF_CROSS // 2
+    h = SIZE_OF_CROSS
+    pygame.gfxdraw.box(cross, (x,y,w,h), DARK_YELLOW)
+    x = 0
+    y = SIZE_OF_CROSS // 4
+    w = SIZE_OF_CROSS
+    h = SIZE_OF_CROSS // 2
+    pygame.gfxdraw.box(cross, (x,y,w,h), DARK_YELLOW)
+
+    border = SIZE_OF_CROSS // 15
+
+    x = SIZE_OF_CROSS // 4 + border
+    y = 0 + border
+    w = SIZE_OF_CROSS // 2 - 2 * border
+    h = SIZE_OF_CROSS - 2 * border
+    pygame.gfxdraw.box(cross, (x,y,w,h), YELLOW)
+    x = 0 + border
+    y = SIZE_OF_CROSS // 4 + border
+    w = SIZE_OF_CROSS - 2 * border
+    h = SIZE_OF_CROSS // 2 - 2 * border
+    pygame.gfxdraw.box(cross, (x,y,w,h), YELLOW)
+
+    pygame.image.save(cross, "materials/cross.png")
+
+def draw_word():
+    pygame.font.init()
+
+    font = pygame.font.Font("C:/Windows/Fonts/calibrib.ttf", 150)
+
+    surface = font.render("Die", True, DARK_GRAY)
+    pygame.image.save(surface, f"materials/Die.png")
+    surface = font.render("py", True, BLUE)
+    pygame.image.save(surface, f"materials/py.png")
+
+    font = pygame.font.Font("C:/Windows/Fonts/calibrib.ttf", 70)
+
+    words = ["Play", "New", "Connect"]
+    for word in words:
+        surface = font.render(word, True, DARK_GRAY)
+        pygame.image.save(surface, f"materials/{word}.png")
+        surface = font.render(word, True, BLUE)
+        pygame.image.save(surface, f"materials/mouseon-{word}.png")
 
 # 若素材不存在則產生
-if not os.path.isdir("material"):
-    os.mkdir("material")
-    draw_battlefield()
-    draw_tank_and_bullet()
-    draw_mothership()
+if 1 or not os.path.isdir("materials"):
+    # os.mkdir("materials")
+    # draw_battlefield()
+    # draw_tank_and_bullet()
+    # draw_mothership()
+    # draw_trigonship()
+    # draw_squareship()
+    # draw_pentagonship()
+    # draw_cross()
+    # draw_word()
+    pass
 
+if __name__ != "__main__":
+    MATERIALS = {}
 
-MATERIALS = {}
+    # 載入戰場
+    MATERIALS["battlefield"] = pygame.image.load("materials/battlefield.png")
 
-# 載入戰場
-MATERIALS["battlefield"] = pygame.image.load("material/battlefield.png")
+    # 載入背景用於更新畫面
+    MATERIALS["background"] = MATERIALS["battlefield"].copy()
 
-# 載入背景用於更新畫面
-MATERIALS["background"] = MATERIALS["battlefield"].copy()
+    # 載入坦克和子彈
+    for color in ("red", "green", "blue", "purple"):
+        MATERIALS[f"{color}-tank-1.0"] =  pygame.image.load(f"materials/{color}-tank-1.0.png")
+        MATERIALS[f"{color}-tank-0.96"] = pygame.image.load(f"materials/{color}-tank-0.96.png")
+        MATERIALS[f"{color}-tank-0.92"] = pygame.image.load(f"materials/{color}-tank-0.92.png")
+        MATERIALS[f"{color}-tank-0.88"] = pygame.image.load(f"materials/{color}-tank-0.88.png")
+        MATERIALS[f"{color}-tank-0.84"] = pygame.image.load(f"materials/{color}-tank-0.84.png")
+        MATERIALS[f"{color}-bullet"] =    pygame.image.load(f"materials/{color}-bullet.png")
 
-# 載入坦克和子彈
-for color in ("red", "green", "blue", "purple"):
-    MATERIALS[f"{color}-tank-1.0"] =  pygame.image.load(f"material/{color}-tank-1.0.png")
-    MATERIALS[f"{color}-tank-0.96"] = pygame.image.load(f"material/{color}-tank-0.96.png")
-    MATERIALS[f"{color}-tank-0.92"] = pygame.image.load(f"material/{color}-tank-0.92.png")
-    MATERIALS[f"{color}-tank-0.88"] = pygame.image.load(f"material/{color}-tank-0.88.png")
-    MATERIALS[f"{color}-tank-0.84"] = pygame.image.load(f"material/{color}-tank-0.84.png")
-    MATERIALS[f"{color}-bullet"] =    pygame.image.load(f"material/{color}-bullet.png")
+    # 載入敵艦
+    MATERIALS["mothership-1.0"] =  pygame.image.load(f"materials/mothership-1.0.png")
+    MATERIALS["mothership-0.96"] = pygame.image.load(f"materials/mothership-0.96.png")
+    MATERIALS["mothership-0.92"] = pygame.image.load(f"materials/mothership-0.92.png")
+    MATERIALS["mothership-0.88"] = pygame.image.load(f"materials/mothership-0.88.png")
+    MATERIALS["mothership-0.84"] = pygame.image.load(f"materials/mothership-0.84.png")
 
-# 載入母艦
-MATERIALS["mothership-1.0"] =  pygame.image.load(f"material/mothership-1.0.png")
-MATERIALS["mothership-0.96"] = pygame.image.load(f"material/mothership-0.96.png")
-MATERIALS["mothership-0.92"] = pygame.image.load(f"material/mothership-0.92.png")
-MATERIALS["mothership-0.88"] = pygame.image.load(f"material/mothership-0.88.png")
-MATERIALS["mothership-0.84"] = pygame.image.load(f"material/mothership-0.84.png")
+    MATERIALS["trigonship"] = pygame.image.load(f"materials/trigonship.png")
+    MATERIALS["squareship"] = pygame.image.load(f"materials/squareship.png")
+    MATERIALS["pentagonship"] = pygame.image.load(f"materials/pentagonship.png")
 
-# 將剩餘黑色設為透明
-for image_key in MATERIALS:
-    if image_key != "battlefield" and image_key != "background":
-        MATERIALS[image_key].set_colorkey(BLACK)
+    # 載入升級十字
+    MATERIALS["cross"] = pygame.image.load(f"materials/cross.png")
+
+    # 將剩餘黑色設為透明
+    for image_key in MATERIALS:
+        if image_key != "battlefield" and image_key != "background":
+            MATERIALS[image_key].set_colorkey(BLACK)
