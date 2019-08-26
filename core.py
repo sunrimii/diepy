@@ -8,9 +8,9 @@ class Bullet(pygame.sprite.Sprite):
     def __init__(self, color, pos, degs, damage, speed):
         super().__init__()
         
-        # 可升級的能力
         self.damage = damage
-        self.speed = speed.rotate(-degs)
+        self.speed = pygame.math.Vector2(speed, 0)
+        self.speed.rotate_ip(-degs)
 
         self.hp = 1
 
@@ -31,18 +31,23 @@ class Bullet(pygame.sprite.Sprite):
         
         self.mask = MATERIALS["bullet-mask"]
 
-    def _update_fadein_fadeout(self, speedup_when_fadein=False):
+    def _update_fadein_fadeout(self, speedup_when_fadein=None, max_alive_time=None):
         alive_time = pygame.time.get_ticks() - self.time_of_birth
 
-        if (alive_time < 500) and (self.hp > 0) and (self.image_alpha < 255):
+        # 若有設定生命期限
+        if max_alive_time and alive_time > max_alive_time:
+            self.hp = 0
+
+        if (alive_time < 1000) and (self.hp > 0) and (self.image_alpha < 255):
             # 剛產生時淡入
             self.image.set_alpha(self.image_alpha)
-            self.image_alpha += 12
+            self.image_alpha += 25
 
+            # 若有設定淡入時加速
             if speedup_when_fadein:
-                self.speed *= 1.1
+                self.speed *= speedup_when_fadein
         
-        elif (self.hp <= 0) or (alive_time > 1500 and type(self) == Bullet):
+        elif self.hp <= 0:
             self.damage = 0
 
             self.image_scale *= 1.028
@@ -52,8 +57,8 @@ class Bullet(pygame.sprite.Sprite):
             
             self.rect = self.image.get_rect(center=self.pos)
             
-            # 消失時淡出
-            self.image_alpha -= 12
+            # 死亡時淡出
+            self.image_alpha -= 20
             self.image.set_alpha(self.image_alpha)
 
             # 完全淡出後刪除
@@ -93,7 +98,7 @@ class Bullet(pygame.sprite.Sprite):
 
         self._update_pos()
         self._update_collision(motherships)
-        self._update_fadein_fadeout()
+        self._update_fadein_fadeout(max_alive_time=1500)
         
 class Trigonship(Bullet):
     def __init__(self, pos, degs):
@@ -103,16 +108,16 @@ class Trigonship(Bullet):
         self.hp = self.max_hp
         self.damage = 1
 
-        self.searching_time = 20000
+        self.search_time = 30000
         # 設為負數使一開始就搜尋
-        self.time_of_starting_to_search = -self.searching_time
+        self.time_of_starting_to_search = -self.search_time
 
         # 將起始位置從坦克中心移至砲口
         offset = pygame.math.Vector2(SIZE_OF_MOTHERSHIP/2, 0)
         offset.rotate_ip(-degs)
         self.pos = pos + offset
 
-        self.speed = pygame.math.Vector2(1.3, 0)
+        self.speed = pygame.math.Vector2(0, 0)
 
         self.time_of_birth = pygame.time.get_ticks()
         self.image_key = "trigonship"
@@ -126,7 +131,7 @@ class Trigonship(Bullet):
         elapsed_time = pygame.time.get_ticks() - self.time_of_starting_to_search
         
         # 減少搜尋次數提升效能
-        if elapsed_time > self.searching_time:
+        if elapsed_time > self.search_time:
             self.time_of_starting_to_search = pygame.time.get_ticks()
 
             # 追蹤最接近的坦克
@@ -139,7 +144,7 @@ class Trigonship(Bullet):
         dx, dy = self.target.pos - self.pos
         self.image_degs = math.degrees(math.atan2(-dy, dx))
         
-        self.speed.update(1, 0)
+        self.speed.update(3, 0)
         self.speed.rotate_ip(-self.image_degs)
 
     def _update_image_rotation(self):
@@ -156,7 +161,7 @@ class Trigonship(Bullet):
         
         self.rect.center = self.pos
     
-    def _update_hp(self):
+    def _update_hpbarr(self):
         # 顯示血量條
         if 0 < self.hp < self.max_hp:
             w1, h1 = MATERIALS[self.image_key].get_size()
@@ -191,8 +196,8 @@ class Trigonship(Bullet):
         self._update_speed()
         self._update_image_rotation()
         self._update_pos()
-        self._update_hp()
-        self._update_fadein_fadeout(speedup_when_fadein=True)
+        self._update_hpbarr()
+        self._update_fadein_fadeout(speedup_when_fadein=2)
 
 class Mothership(Trigonship):
     def __init__(self):
@@ -202,34 +207,23 @@ class Mothership(Trigonship):
         self.hp = self.max_hp
         self.damage = 0
 
-        # 在緩速區隨機初始位置
-        # while True:
-        #     pos = random.randint(
-        #         low=SIZE_OF_SLOWZONE,
-        #         high=SIZE_OF_BATTLEFIELD - SIZE_OF_SLOWZONE,
-        #         size=2)
-            
-        #     x_in_range = SIZE_OF_SLOWZONE <= pos[0] <= SIZE_OF_BATTLEFIELD - SIZE_OF_SLOWZONE
-        #     y_in_range = SIZE_OF_SLOWZONE <= pos[1] <= SIZE_OF_BATTLEFIELD - SIZE_OF_SLOWZONE
-            
-        #     if not (x_in_range and y_in_range):
-        #         self.pos = pygame.math.Vector2(pos[0], pos[1])
-        #         break
-        
+        # 在非緩速區隨機初始位置
+        # pos = [random.randint(SIZE_OF_SLOWZONE, SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE) for _ in range(2)]
+        # self.pos = pygame.math.Vector2(pos)
         self.pos = pygame.math.Vector2(0, 0)
-        self.speed = pygame.math.Vector2(1, 0)
+        self.speed = pygame.math.Vector2(0, 0)
         
-        self.searching_time = 20000
+        self.search_time = 20000
         # 設為負數使一開始就搜尋
-        self.time_of_starting_to_search = -self.searching_time
+        self.time_of_starting_to_search = -self.search_time
 
         self.littleships = pygame.sprite.Group()
         self.is_reloading = False # 主要用於計算砲管伸縮長度
         self.time_of_starting_to_reload = 0
-        self.reloading_time = 300
+        self.reload_time = 300
         self.is_cooling = False # 主要用於計算攻擊時機
         self.time_of_starting_to_cool = 0
-        self.cooling_time = 5000
+        self.cooldown_time = 5000
 
         self.time_of_birth = pygame.time.get_ticks()
         self.image_series = "mothership"
@@ -244,57 +238,57 @@ class Mothership(Trigonship):
     def _update_speed(self):
         dx, dy = self.target.pos - self.pos
         degs = math.degrees(math.atan2(dy, dx))
-        self.speed.update(0.5, 0)
+        self.speed.update(1, 0)
         self.speed.rotate_ip(degs)
     
-    def _update_cooling_time(self):
+    def _update_cooldown_time(self):
         if self.is_cooling:
             elapsed_time = pygame.time.get_ticks() - self.time_of_starting_to_cool
-            if elapsed_time > self.cooling_time:
+            if elapsed_time > self.cooldown_time:
                 self.is_cooling = False
     
-    def _update_reloading_time_and_image_key(self):
+    def _update_reload_time_and_image_key(self):
         # 若發射後的冷卻期間伸縮砲管
         if self.is_reloading:
             # 從發射後所經過的時間
             elapsed_time = pygame.time.get_ticks() - self.time_of_starting_to_reload
             # 冷卻結束
-            if elapsed_time >= self.reloading_time:
+            if elapsed_time >= self.reload_time:
                 self.is_reloading = False
             
             # 後25%的時間拉長 有反方向的後座力
-            elif elapsed_time > self.reloading_time*0.5:
+            elif elapsed_time > self.reload_time*0.5:
                 self.image_key = f"{self.image_series}-1.0"
 
                 if hasattr(self, "recoil"):
                     self.speed += self.recoil.rotate(180-self.image_degs)
             
-            elif elapsed_time > self.reloading_time*0.45:
+            elif elapsed_time > self.reload_time*0.45:
                 self.image_key = f"{self.image_series}-0.96"
             
-            elif elapsed_time > self.reloading_time*0.4:
+            elif elapsed_time > self.reload_time*0.4:
                 self.image_key = f"{self.image_series}-0.92"
             
-            elif elapsed_time > self.reloading_time*0.35:
+            elif elapsed_time > self.reload_time*0.35:
                 self.image_key = f"{self.image_series}-0.88"
             
-            elif elapsed_time > self.reloading_time*0.3:
+            elif elapsed_time > self.reload_time*0.3:
                 self.image_key = f"{self.image_series}-0.84"
             
             # 前25%的時間收縮
-            elif elapsed_time > self.reloading_time*0.25:
+            elif elapsed_time > self.reload_time*0.25:
                 self.image_key = f"{self.image_series}-0.84"
             
-            elif elapsed_time > self.reloading_time*0.2:
+            elif elapsed_time > self.reload_time*0.2:
                 self.image_key = f"{self.image_series}-0.88"
             
-            elif elapsed_time > self.reloading_time*0.15:
+            elif elapsed_time > self.reload_time*0.15:
                 self.image_key = f"{self.image_series}-0.92"
             
-            elif elapsed_time > self.reloading_time*0.1:
+            elif elapsed_time > self.reload_time*0.1:
                 self.image_key = f"{self.image_series}-0.96"
             
-            elif elapsed_time > self.reloading_time*0.05:
+            elif elapsed_time > self.reload_time*0.05:
                 self.image_key = f"{self.image_series}-1.0"
         
         # 縱使沒有發射也要更新
@@ -321,13 +315,13 @@ class Mothership(Trigonship):
                 trigonship = Trigonship(self.pos, self.image_degs+degs)
                 self.littleships.add(trigonship)
 
-        self._update_cooling_time()
-        self._update_reloading_time_and_image_key()
+        self._update_cooldown_time()
+        self._update_reload_time_and_image_key()
         self._update_target(tanks)
         self._update_speed()
         self._update_image_rotation()
         self._update_pos()
-        self._update_hp()
+        self._update_hpbarr()
         self._update_fadein_fadeout()
         self.littleships.update(tanks)
 
@@ -358,6 +352,8 @@ class Cross(Mothership):
             for collied_tank in collied_tanks:
                 if collied_tank.hp > 0:
                     self.hp = 0
+                    collied_tank.available_skill_pnt[0] += 1
+                    collied_tank.total_skill_pnt += 1
                     return
 
     def update(self, tanks):
@@ -365,7 +361,7 @@ class Cross(Mothership):
         self._update_pos()
         self._update_collision(tanks)
         self._update_fadein_fadeout()
-        
+
 class Tank(Mothership):
     def __init__(self, color, addr=None):
         pygame.sprite.Sprite.__init__(self)
@@ -375,14 +371,23 @@ class Tank(Mothership):
         
         self.color = color
 
-        self.skill_pnt = 0
+        # 初始化能力值面板
+        self.num_of_barrel_label = SkillPanelLabel("Barrel", (50,800))
+        self.reload_time_label = SkillPanelLabel("Reload Time", (50,850))
+        self.bullet_damage_label = SkillPanelLabel("Bullet Damage", (50,900))
+        self.bullet_speed_label = SkillPanelLabel("Bullet Speed", (50,950))
+        self.max_speed_label = SkillPanelLabel("Movement Speed", (50,1000))
+        self.skill_panel = pygame.sprite.Group()
+        self.skill_panel.add(self.num_of_barrel_label)
+        self.skill_panel.add(self.reload_time_label)
+        self.skill_panel.add(self.bullet_damage_label)
+        self.skill_panel.add(self.bullet_speed_label)
+        self.skill_panel.add(self.max_speed_label)
 
-        # 可升級的能力值
-        self.num_of_barrel = 1
-        self.reloading_time = 300
-        self.damage_of_bullet = 1
-        self.speed_of_bullet = pygame.math.Vector2(1.5, 0)
-        self.max_speed = 2.3
+        # 初始化能力值點數
+        self.total_skill_pnt = 5
+        # 以列表儲存為了傳址
+        self.available_skill_pnt = [5]
 
         self.max_hp = 2000000
         self.hp = self.max_hp
@@ -390,13 +395,12 @@ class Tank(Mothership):
 
         # 在非緩速區隨機初始位置
         # pos = [random.randint(SIZE_OF_SLOWZONE, SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE) for _ in range(2)]
-        
-        # self.pos = pygame.math.Vector2(pos[0], pos[1])
+        # self.pos = pygame.math.Vector2(pos)
         self.pos = pygame.math.Vector2(500,500)
 
         self.speed = pygame.math.Vector2(0, 0)
-        self.acc = 0.01
-        self.recoil = pygame.math.Vector2(0.005, 0)
+        self.acc = 0.2
+        self.recoil = pygame.math.Vector2(0.01, 0)
         
         self.bullets = pygame.sprite.Group()
         self.is_reloading = False
@@ -462,7 +466,10 @@ class Tank(Mothership):
                     # 互相傷害
                     collied_mothership.hp -= self.damage
                     self.hp -= collied_mothership.damage
-       
+
+                    if self.hp <= 0:
+                        self._reborn
+
             # 偵測小飛機碰撞
             for mothership in motherships:
                 collied_littleships = pygame.sprite.spritecollide(self, mothership.littleships, False, pygame.sprite.collide_mask)
@@ -472,8 +479,11 @@ class Tank(Mothership):
                         collied_littleship.hp -= self.damage
                         self.hp -= collied_littleship.damage
 
+                        if self.hp <= 0:
+                            self._reborn
+
     def _update_cam(self):
-        # 使鏡頭平滑移動
+        # 使鏡頭平滑移動 數字越小鏡頭移動越慢
         self.cam_pos += (self.pos-self.cam_pos) * 0.03
         self.cam.center = self.cam_pos
 
@@ -481,51 +491,71 @@ class Tank(Mothership):
         self.cam.x = min(max(self.cam.x, 0), SIZE_OF_BATTLEFIELD-self.cam.w)
         self.cam.y = min(max(self.cam.y, 0), SIZE_OF_BATTLEFIELD-self.cam.h)
         
+    def _reborn(self):
+        """若死亡則減少三點能力值復活"""
+        
+        self.hp = self.max_hp
+        self.total_skill_pnt = max(self.total_skill_pnt-3, 0)
+        self.available_skill_pnt = self.total_skill_pnt
+
+        pos = [random.randint(SIZE_OF_SLOWZONE, SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE) for _ in range(2)]
+        self.pos = pygame.math.Vector2(pos)
+    
     def update(self, events, motherships):
+        # 伺服器用 根據地址取得該坦克的輸入事件
         if type(events) == dict:
             event = events[self.addr]
         else:
             event = events
 
         pressed_keys, is_clicked, mouse_pos = event
-        mouse_pos += pygame.math.Vector2(self.cam.topleft) # 加上鏡頭位置的偏移
+        # 加上鏡頭位置的偏移
+        mouse_pos += pygame.math.Vector2(self.cam.topleft)
 
+        # 顯示或隱藏能力值面板
+        if self.available_skill_pnt[0] > 0:
+            for label in self.skill_panel:
+                label.image_alpha = 255
+        else:
+            for label in self.skill_panel:
+                label.image_alpha = 0
+
+        # 更新能力值
+        self.num_of_barrel = self.num_of_barrel_label.lv + 1
+        self.reload_time = 300 - self.reload_time_label.lv * 30
+        self.bullet_damage = 1 + self.bullet_damage_label.lv
+        self.bullet_speed = 3 + self.bullet_speed_label.lv * 0.5
+        self.max_speed = 3.5 + self.max_speed_label.lv * 0.5
+        
         # 左鍵發射子彈
         if (not self.is_reloading) and is_clicked:
             self.is_reloading = True
             self.time_of_starting_to_reload = pygame.time.get_ticks()
             if self.num_of_barrel == 1:
-                bullet = Bullet(self.color, self.pos, self.image_degs, self.damage_of_bullet, self.speed_of_bullet)
+                bullet = Bullet(self.color, self.pos, self.image_degs, self.bullet_damage, self.bullet_speed)
                 self.bullets.add(bullet)
 
-        self._update_reloading_time_and_image_key()
+        self._update_reload_time_and_image_key()
         self._update_speed(pressed_keys)
         self._update_image_rotation(mouse_pos)
         self._update_pos()
-        self._update_hp()
+        self._update_hpbarr()
         self._update_collision(motherships)
         self._update_fadein_fadeout()
         self._update_cam()
         self.bullets.update(motherships)
+        self.skill_panel.update(event, self.cam.topleft, self.available_skill_pnt, is_clicked, mouse_pos)
 
-class SkillPanel(pygame.sprite.Sprite):
-    def __init__(self):
+class StartMenuLabel(pygame.sprite.Sprite):
+    def __init__(self, text, topleft, clickable=False):
         super().__init__()
 
-        self.image
-
-
-class Label(pygame.sprite.Sprite):
-    def __init__(self, text, topleft, clickable=False, hotkey=None):
-        super().__init__()
-
-        self.image = pygame.image.load(f"materials/{text}.png")
+        self.text = text
         
         self.clickable = clickable
-        
-        if clickable:
-            self.mouseon_image = pygame.image.load(f"materials/mouseon-{text}.png")
-            self.mouseoff_image = self.image.copy()
+        self.is_clicked = False
+
+        self.image = MATERIALS[self.text]
 
         self.rect = self.image.get_rect(topleft=topleft)
 
@@ -533,13 +563,44 @@ class Label(pygame.sprite.Sprite):
         if self.clickable:
             _, is_clicked, mouse_pos = event
 
+            # 檢查滑鼠是否在上
             if self.rect.collidepoint(mouse_pos):
-                self.image = self.mouseon_image
+                self.image = MATERIALS[f"mouseon-{self.text}"]
                 if is_clicked:
-                    self.kill()
+                    self.is_clicked = True
             else:
-                self.image = self.mouseoff_image
-     
+                self.image = MATERIALS[self.text]
+
+class SkillPanelLabel(pygame.sprite.Sprite):
+    def __init__(self, text, topleft):
+        super().__init__()
+
+        self.lv = 0
+
+        self.x_offset = topleft[0]
+        self.y_offset = topleft[1]
+
+        self.text = text
+        self.image_key = f"{self.text}-0"
+        self.image = MATERIALS[self.image_key]
+        self.image_alpha = 0
+        
+        self.rect = self.image.get_rect()
+
+    def update(self, event, cam_topleft, available_skill_pnt, is_clicked, mouse_pos):
+        # 座標每次皆重置 為鏡頭座標加上螢幕的相對座標
+        self.rect.topleft = cam_topleft
+        self.rect.x += self.x_offset
+        self.rect.y += self.y_offset
+
+        if available_skill_pnt[0] and is_clicked and self.rect.collidepoint(mouse_pos):
+            self.lv += 1
+            available_skill_pnt[0] -= 1
+            self.image_key = f"{self.text}-{self.lv}"
+            self.image = MATERIALS[self.image_key]
+
+        self.image.set_alpha(self.image_alpha)
+
 class Diepy:
     def __init__(self):
         self.is_running = True
@@ -563,42 +624,51 @@ class Diepy:
 
     def load_materials(self):
         pygame.display.init()
-        
         for image_key in MATERIALS:
             MATERIALS[image_key] = MATERIALS[image_key].convert()
 
         # 遮罩用於碰撞檢測
         MATERIALS["bullet-mask"] = pygame.mask.from_surface(MATERIALS["red-bullet"])
 
-    def select_mode(self):
-        # 載入選單用字
-        single_label = Label("Play", (800,500), True)
-        server_label = Label("New", (800,600), True)
-        client_label = Label("Connect", (800,700), True)
-        menu = pygame.sprite.RenderUpdates()
-        menu.add(Label("Die", (800,200)))
-        menu.add(Label("py", (1010,200)))
-        menu.add(single_label)
-        menu.add(server_label)
-        menu.add(client_label)
+        # 載入起始選單
+        MATERIALS["Die"] = pygame.image.load(f"materials/Die.png")
+        MATERIALS["py"] = pygame.image.load(f"materials/py.png")
+        MATERIALS["Play"] = pygame.image.load(f"materials/Play.png")
+        MATERIALS["New"] = pygame.image.load(f"materials/New.png")
+        MATERIALS["Connect"] = pygame.image.load(f"materials/Connect.png")
+        MATERIALS["mouseon-Play"] = pygame.image.load(f"materials/mouseon-Play.png")
+        MATERIALS["mouseon-New"] = pygame.image.load(f"materials/mouseon-New.png")
+        MATERIALS["mouseon-Connect"] = pygame.image.load(f"materials/mouseon-Connect.png")
+        
+        # 建立起始選單
+        self.single_label = StartMenuLabel("Play", (800,500), True)
+        self.server_label = StartMenuLabel("New", (800,600), True)
+        self.client_label = StartMenuLabel("Connect", (800,700), True)
+        self.start_menu = pygame.sprite.RenderUpdates()
+        self.start_menu.add(StartMenuLabel("Die", (800,200)))
+        self.start_menu.add(StartMenuLabel("py", (1010,200)))
+        self.start_menu.add(self.single_label)
+        self.start_menu.add(self.server_label)
+        self.start_menu.add(self.client_label)
 
+    def select_mode(self):
         self.display.fill((240, 240, 240))
         pygame.display.update()
 
         self.mode = None
-        while not self.mode:
+        while self.is_running and not self.mode:
             event = self.get_event()
-            menu.update(event)
+            self.start_menu.update(event)
 
-            changes = menu.draw(self.display)
+            changes = self.start_menu.draw(self.display)
             self.clock.tick(144)
             pygame.display.update(changes)
 
-            if not menu.has(single_label):
+            if self.single_label.is_clicked:
                 self.mode = "single"
-            elif not menu.has(server_label):
+            elif self.server_label.is_clicked:
                 self.mode = "server"
-            elif not menu.has(client_label):
+            elif self.client_label.is_clicked:
                 self.mode = "client"
 
     def add_tank(self, addr=None, serverself=False):
@@ -621,23 +691,23 @@ class Diepy:
             self.tanks.add(tank)
 
     def add_mothership(self):
-        """加入母艦 數量與玩家人數相同"""
+        """加入母艦 數量與客戶端人數相同"""
 
         for _ in range(len(self.tanks)):
             self.motherships.add(Mothership())
 
     def add_cross(self):
-        """加入升級十字 產生機率根據玩家人數遞增"""
+        """加入升級十字 產生機率根據客戶端人數遞增"""
 
-        if len(self.crosses) < 5:
-            max_ = 1000 // len(self.tanks)
-
-            # 只有隨機產生是0時才為真
+        # 限制總數量
+        if len(self.crosses) < 10:
+            max_ = 100 // len(self.tanks)
+            # 只有選中是0時才增加
             if not random.randint(0, max_):
                 self.crosses.add(Cross())
 
     def get_event(self):
-        """取得該玩家的輸入事件"""
+        """取得該客戶端的輸入事件"""
 
         pressed_keys = pygame.key.get_pressed()
         is_clicked = pygame.mouse.get_pressed()[0]
@@ -663,10 +733,10 @@ class Diepy:
         self.motherships.update(self.tanks)
         self.crosses.update(self.tanks)
 
-    def get_drawinfo(self):
-        """伺服器用於取得所有精靈的繪製資訊"""
+    def get_sprites(self):
+        """伺服器用於取得所有精靈的繪製資訊 若完全透明則不傳送"""
         
-        drawinfo = []
+        sprites = []
 
         for tank in self.tanks:
             key = tank.image_key
@@ -675,7 +745,8 @@ class Diepy:
             alpha = tank.image_alpha
             degs = tank.image_degs
 
-            drawinfo.append((key, rect, topleft, alpha, degs))
+            if alpha > 0:
+                sprites.append((key, rect, topleft, alpha, degs))
 
             for bullet in tank.bullets:
                 key = bullet.image_key
@@ -684,8 +755,9 @@ class Diepy:
                 alpha = bullet.image_alpha
                 degs = 0
 
-                drawinfo.append((key, rect, topleft, alpha, degs))
-        
+                if alpha > 0:
+                    sprites.append((key, rect, topleft, alpha, degs))
+
         for mothership in self.motherships:
             key = mothership.image_key
             rect = mothership.rect
@@ -693,7 +765,8 @@ class Diepy:
             alpha = mothership.image_alpha
             degs = mothership.image_degs
 
-            drawinfo.append((key, rect, topleft, alpha, degs))
+            if alpha > 0:
+                sprites.append((key, rect, topleft, alpha, degs))
 
             for littleship in mothership.littleships:
                 key = littleship.image_key
@@ -702,22 +775,44 @@ class Diepy:
                 alpha = littleship.image_alpha
                 degs = littleship.image_degs
 
-                drawinfo.append((key, rect, topleft, alpha, degs))
+                if alpha > 0:
+                    sprites.append((key, rect, topleft, alpha, degs))
     
-        return drawinfo
+        return sprites
 
+    def get_skill_panels(self):
+        """伺服器用於取得所有客戶端能力值面板的繪製資訊 若無可用點數則不傳送"""
+
+        skill_panels = {}
+
+        for tank in self.tanks:
+            skill_panels[tank.addr] = []
+            if tank.available_skill_pnt:
+                for label in tank.skill_panel:
+                    key = label.image_key
+                    topleft = label.rect.topleft
+
+                    skill_panels[tank.addr].append((key, topleft))
+
+            else:
+                skill_panels[tank.addr] = None
+        
+        return skill_panels
+    
     def get_cams(self):
-        """伺服器用於取得每個玩家鏡頭位置"""
+        """伺服器用於取得每個客戶端鏡頭位置"""
 
         cams = {}
         for tank in self.tanks:
             cams[tank.addr] = tank.cam
         return cams
-
-    def update_screen(self, drawinfo=None, cam=None):
-        # 畫所有精靈畫在戰場上
+    
+    def update_screen(self, sprites=None, skill_panel=None, cam=None):
+        """更新畫面 先畫出來再以鏡頭位置切割戰場出顯示所需部分"""
+        
         if self.mode == "client":
-            for key, rect, topleft, alpha, degs in drawinfo:
+            # 畫所有精靈
+            for key, rect, topleft, alpha, degs in sprites:
                 image = None
                 no_transform = True
                 
@@ -731,12 +826,21 @@ class Diepy:
                     image = pygame.transform.rotate(MATERIALS[key], degs)
                     no_transform = False
                 
+                # 若圖片無調整則使用原圖畫
                 if no_transform:
                     image = MATERIALS[key]
 
+                # 設定透明度
                 image.set_alpha(alpha)
 
+                # 畫該精靈在戰場上
                 MATERIALS["battlefield"].blit(image, topleft)
+            
+            # 畫能力值面板
+            if skill_panel:
+                for key, topleft in skill_panel:
+                    image = MATERIALS[key]
+                    MATERIALS["battlefield"].blit(image, topleft)
 
         else:
             # 畫坦克
@@ -756,21 +860,26 @@ class Diepy:
             # 畫升級十字
             self.crosses.draw(MATERIALS["battlefield"])
 
-            # 更新鏡頭位置
+            # 畫能力值面板
+            for tank in self.tanks:
+                tank.skill_panel.draw(MATERIALS["battlefield"])
+
             if self.mode == "server":
+                # 更新鏡頭位置
                 cam = self.cam
             # 單人模式用
             else:
+                # 更新鏡頭位置
                 cam = self.tanks.sprites()[0].cam
-        
-        # 將戰場更新到畫面上
+
+        # 將鏡頭中的戰場更新到畫面上
         self.display.blit(MATERIALS["battlefield"], (0,0), cam)
-        self.clock.tick(144)
+        self.clock.tick(60)
         pygame.display.update()
 
-        # 為下一張預先清除戰場
         if self.mode == "client":
-            for _, rect, topleft, _, _ in drawinfo:
+            # 清所有精靈
+            for _, rect, topleft, _, _ in sprites:
                 MATERIALS["battlefield"].blit(MATERIALS["background"], topleft, rect)
 
         else:
@@ -790,3 +899,7 @@ class Diepy:
 
             # 清升級十字
             self.crosses.clear(MATERIALS["battlefield"], MATERIALS["background"])
+           
+            # 清能力值面板
+            for tank in self.tanks:
+                tank.skill_panel.clear(MATERIALS["battlefield"], MATERIALS["background"])

@@ -54,7 +54,7 @@ class Handler(socketserver.BaseRequestHandler):
         self.request.sendall(data)
 
     def handle(self):
-        has_verified = False
+        is_verified = False
 
         # 分支伺服器循環
         while True:
@@ -63,25 +63,27 @@ class Handler(socketserver.BaseRequestHandler):
             self.server.events[self.client_address] = event
 
             # 第一次循環驗證客戶端身分
-            if not has_verified:
+            if not is_verified:
                 # 檢查輸入事件是否符合格式
                 if isinstance(event, tuple) and len(event) == 3:
                     self.server.game.add_tank(self.client_address)
-                    has_verified = True
+                    is_verified = True
 
+                # 驗證失敗
                 else:
                     del self.server.events[self.client_address]
                     raise Exception
 
             # 等待伺服器處理完遊戲邏輯
             while self.server.events:
-                time.sleep(0.00001)
-            
-            # 傳送繪製位置和鏡頭位置給客戶端
-            data = (self.server.drawinfo, self.server.cams[self.client_address])
+                time.sleep(0.01)
+
+            # 傳送 精靈們 和 其能力值面板 和 其鏡頭位置 給客戶端
+            data = (self.server.sprites, self.server.skill_panels[self.client_address], 
+                self.server.cams[self.client_address],)
             self.sendall_(data)
 
-            # 刪除繪製位置和鏡頭位置使伺服器判斷是否已傳送
+            # 刪除鏡頭位置使伺服器判斷是否已傳送
             del self.server.cams[self.client_address]
 
 class Client:
@@ -90,9 +92,11 @@ class Client:
         self.sock.connect(addr)
 
     def __enter__(self):
+        print("開啟客戶端")
         return self
 
     def __exit__(self, *arg):
+        print("關閉客戶端")
         self.sock.close()
 
     def recv_(self):

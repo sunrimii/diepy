@@ -18,6 +18,7 @@ COLOR_OF_SLOWZONE = (210, 210, 210)
 COLOR_OF_HP = (100, 200, 100)
 
 BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
 
 GRAY = (153, 153, 153)
 RED = (241, 78, 84)
@@ -241,7 +242,7 @@ def draw_cross():
 
     pygame.image.save(cross, "materials/cross.png")
 
-def draw_word():
+def draw_start_menu_label():
     pygame.font.init()
 
     font = pygame.font.Font("C:/Windows/Fonts/calibrib.ttf", 150)
@@ -260,17 +261,36 @@ def draw_word():
         surface = font.render(word, True, BLUE)
         pygame.image.save(surface, f"materials/mouseon-{word}.png")
 
+def draw_skill_panel_label():
+    pygame.font.init()
+
+    label = pygame.Surface((200, 35))
+    
+    font = pygame.font.Font("C:/Windows/Fonts/calibrib.ttf", 20)
+
+    for word in ("Barrel", "Reload Time", "Bullet Damage", "Bullet Speed", "Movement Speed"):
+        for lv in range(6):
+            label.fill(DARK_GRAY)
+            pygame.gfxdraw.box(label, (3,3,194,29), GRAY)
+            w = 39 * lv
+            pygame.gfxdraw.box(label, (3,3,w,29), GREEN)
+            surface = font.render(word, True, WHITE)
+            x = (200 - surface.get_width()) // 2
+            label.blit(surface, (x,9))
+            pygame.image.save(label, f"materials/{word}-{lv}.png")
+
 # 若素材不存在則產生
 if 1 or not os.path.isdir("materials"):
     # os.mkdir("materials")
     # draw_battlefield()
     # draw_tank_and_bullet()
     # draw_mothership()
-    # draw_trigonship()
+    draw_trigonship()
     # draw_squareship()
     # draw_pentagonship()
     # draw_cross()
-    # draw_word()
+    # draw_start_menu_label()
+    # draw_skill_panel_label()
     pass
 
 if __name__ != "__main__":
@@ -309,3 +329,8 @@ if __name__ != "__main__":
     for image_key in MATERIALS:
         if image_key != "battlefield" and image_key != "background":
             MATERIALS[image_key].set_colorkey(BLACK)
+
+    # 載入能力值面板
+    for word in ("Barrel", "Reload Time", "Bullet Damage", "Bullet Speed", "Movement Speed"):
+        for lv in range(6):
+            MATERIALS[f"{word}-{lv}"] = pygame.image.load(f"materials/{word}-{lv}.png")
