@@ -301,19 +301,18 @@ def draw_hpbar():
         pygame.image.save(hpbar, f"materials/hpbar-{rw}.png")
 
 # 若素材不存在則產生
-if 1 or not os.path.isdir("materials"):
-    # os.mkdir("materials")
-    # draw_battlefield()
-    # draw_tank_and_bullet()
-    # draw_mothership()
-    # draw_trigonship()
-    # draw_squareship()
-    # draw_pentagonship()
-    # draw_cross()
-    # draw_start_menu_label()
-    # draw_skill_panel_label()
+if not os.path.isdir("materials"):
+    os.mkdir("materials")
+    draw_battlefield()
+    draw_tank_and_bullet()
+    draw_mothership()
+    draw_trigonship()
+    draw_squareship()
+    draw_pentagonship()
+    draw_cross()
+    draw_start_menu_label()
+    draw_skill_panel_label()
     draw_hpbar()
-    pass
 
 if __name__ != "__main__":
     MATERIALS = {}
