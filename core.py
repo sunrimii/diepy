@@ -161,42 +161,11 @@ class Trigonship(Bullet):
         
         self.rect.center = self.pos
     
-    def _update_hpbarr(self):
-        # 顯示血量條
-        if 0 < self.hp < self.max_hp:
-            w1, h1 = MATERIALS[self.image_key].get_size()
-            w2, h2 = self.image.get_size()
-            
-            # 黑
-            cr = 5
-            cx = w2 // 2 - w1 // 10 * 2
-            cy = h2 // 2 + h1 // 10 * 4
-            pygame.gfxdraw.filled_circle(self.image, cx, cy, cr, DARK_GRAY)
-            rx = cx + cr // 2
-            ry = cy - cr + 1
-            rw = h1 // 10 * 4
-            rh = 10
-            pygame.gfxdraw.box(self.image, (rx, ry, rw, rh), DARK_GRAY)
-            cx += w1 // 10 * 4
-            pygame.gfxdraw.filled_circle(self.image, cx, cy, cr, DARK_GRAY)
-            
-            # 綠
-            cr -= 2
-            cx = w2 // 2 - w1 // 10 * 2
-            pygame.gfxdraw.filled_circle(self.image, cx, cy, cr, COLOR_OF_HP)
-            ry += 2
-            rh -= 4
-            rw = rw * self.hp // self.max_hp
-            pygame.gfxdraw.box(self.image, (rx, ry, rw, rh), COLOR_OF_HP)
-            cx += rw
-            pygame.gfxdraw.filled_circle(self.image, cx, cy, cr, COLOR_OF_HP)
-    
     def update(self, tanks):
         self._update_target(tanks)
         self._update_speed()
         self._update_image_rotation()
         self._update_pos()
-        self._update_hpbarr()
         self._update_fadein_fadeout(speedup_when_fadein=2)
 
 class Mothership(Trigonship):
@@ -205,12 +174,12 @@ class Mothership(Trigonship):
 
         self.max_hp = 5000
         self.hp = self.max_hp
-        self.damage = 0
+        self.damage = 99999
 
         # 在非緩速區隨機初始位置
-        # pos = [random.randint(SIZE_OF_SLOWZONE, SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE) for _ in range(2)]
-        # self.pos = pygame.math.Vector2(pos)
-        self.pos = pygame.math.Vector2(0, 0)
+        pos = [random.randint(SIZE_OF_SLOWZONE, SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE) for _ in range(2)]
+        self.pos = pygame.math.Vector2(pos)
+        
         self.speed = pygame.math.Vector2(0, 0)
         
         self.search_time = 20000
@@ -321,7 +290,6 @@ class Mothership(Trigonship):
         self._update_speed()
         self._update_image_rotation()
         self._update_pos()
-        self._update_hpbarr()
         self._update_fadein_fadeout()
         self.littleships.update(tanks)
 
@@ -389,14 +357,13 @@ class Tank(Mothership):
         # 以列表儲存為了傳址
         self.available_skill_pnt = [5]
 
-        self.max_hp = 2000000
+        self.max_hp = 20
         self.hp = self.max_hp
         self.damage = 10
 
         # 在非緩速區隨機初始位置
-        # pos = [random.randint(SIZE_OF_SLOWZONE, SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE) for _ in range(2)]
-        # self.pos = pygame.math.Vector2(pos)
-        self.pos = pygame.math.Vector2(500,500)
+        pos = [random.randint(SIZE_OF_SLOWZONE, SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE) for _ in range(2)]
+        self.pos = pygame.math.Vector2(pos)
 
         self.speed = pygame.math.Vector2(0, 0)
         self.acc = 0.2
@@ -420,6 +387,8 @@ class Tank(Mothership):
         self.cam = pygame.Rect(0, 0, 1920, 1080)
         self.cam_pos = [random.randint(SIZE_OF_SLOWZONE, SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE) for _ in range(2)]
         self.cam.center = self.cam_pos
+
+        self.hpbar = pygame.sprite.GroupSingle(Hpbar())
 
     def _update_speed(self, pressed_keys):
         # 上下加速度
@@ -468,7 +437,7 @@ class Tank(Mothership):
                     self.hp -= collied_mothership.damage
 
                     if self.hp <= 0:
-                        self._reborn
+                        self._reborn()
 
             # 偵測小飛機碰撞
             for mothership in motherships:
@@ -480,7 +449,7 @@ class Tank(Mothership):
                         self.hp -= collied_littleship.damage
 
                         if self.hp <= 0:
-                            self._reborn
+                            self._reborn()
 
     def _update_cam(self):
         # 使鏡頭平滑移動 數字越小鏡頭移動越慢
@@ -496,7 +465,7 @@ class Tank(Mothership):
         
         self.hp = self.max_hp
         self.total_skill_pnt = max(self.total_skill_pnt-3, 0)
-        self.available_skill_pnt = self.total_skill_pnt
+        self.available_skill_pnt[0] = self.total_skill_pnt
 
         pos = [random.randint(SIZE_OF_SLOWZONE, SIZE_OF_BATTLEFIELD-SIZE_OF_SLOWZONE) for _ in range(2)]
         self.pos = pygame.math.Vector2(pos)
@@ -539,13 +508,36 @@ class Tank(Mothership):
         self._update_speed(pressed_keys)
         self._update_image_rotation(mouse_pos)
         self._update_pos()
-        self._update_hpbarr()
         self._update_collision(motherships)
         self._update_fadein_fadeout()
         self._update_cam()
         self.bullets.update(motherships)
         self.skill_panel.update(event, self.cam.topleft, self.available_skill_pnt, is_clicked, mouse_pos)
+        self.hpbar.update(self.hp, self.max_hp, self.pos, self.image_key)
 
+class Hpbar(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+
+        self.image_key = "hpbar-0"
+        self.image = MATERIALS[self.image_key]
+
+        self.rect = self.image.get_rect()
+
+    def update(self, hp, max_hp, pos, image_key):
+        # 兩範圍間的映射
+        i = int(50 * hp / max_hp)
+
+        # 取偶數
+        if i % 2:
+            i += 1
+
+        self.image_key = f"hpbar-{i}"
+        self.image = MATERIALS[self.image_key]
+        
+        self.rect.center = pos
+        self.rect.y += MATERIALS[image_key].get_height() // 2
+        
 class StartMenuLabel(pygame.sprite.Sprite):
     def __init__(self, text, topleft, clickable=False):
         super().__init__()
@@ -680,9 +672,9 @@ class Diepy:
             tank = Tank(color, addr)
             self.tanks.add(tank)
 
-            # 伺服器自己的鏡頭資訊紀錄在本地不需傳送
             if serverself:
-                self.cam = tank.cam
+                self.serverself_cam = tank.cam
+                self.serverself_skill_panel = tank.skill_panel
         
         # 單人模式用
         else:
@@ -701,7 +693,7 @@ class Diepy:
 
         # 限制總數量
         if len(self.crosses) < 10:
-            max_ = 100 // len(self.tanks)
+            max_ = 500 // len(self.tanks)
             # 只有選中是0時才增加
             if not random.randint(0, max_):
                 self.crosses.add(Cross())
@@ -758,6 +750,13 @@ class Diepy:
                 if alpha > 0:
                     sprites.append((key, rect, topleft, alpha, degs))
 
+            key = tank.hpbar.sprite.image_key
+            rect = tank.hpbar.sprite.rect
+            topleft = tank.hpbar.sprite.rect.topleft
+            alpha = 255
+            degs = 0
+            sprites.append((key, rect, topleft, alpha, degs))
+
         for mothership in self.motherships:
             key = mothership.image_key
             rect = mothership.rect
@@ -790,9 +789,10 @@ class Diepy:
             if tank.available_skill_pnt:
                 for label in tank.skill_panel:
                     key = label.image_key
+                    rect = label.rect
                     topleft = label.rect.topleft
 
-                    skill_panels[tank.addr].append((key, topleft))
+                    skill_panels[tank.addr].append((key, rect, topleft))
 
             else:
                 skill_panels[tank.addr] = None
@@ -838,7 +838,7 @@ class Diepy:
             
             # 畫能力值面板
             if skill_panel:
-                for key, topleft in skill_panel:
+                for key, _, topleft in skill_panel:
                     image = MATERIALS[key]
                     MATERIALS["battlefield"].blit(image, topleft)
 
@@ -860,15 +860,23 @@ class Diepy:
             # 畫升級十字
             self.crosses.draw(MATERIALS["battlefield"])
 
-            # 畫能力值面板
+            # 畫血條
             for tank in self.tanks:
-                tank.skill_panel.draw(MATERIALS["battlefield"])
+                tank.hpbar.draw(MATERIALS["battlefield"])
 
             if self.mode == "server":
+                # 畫能力值面板
+                self.serverself_skill_panel.draw(MATERIALS["battlefield"])
+
                 # 更新鏡頭位置
-                cam = self.cam
+                cam = self.serverself_cam
+            
             # 單人模式用
             else:
+                # 畫能力值面板
+                for tank in self.tanks:
+                    tank.skill_panel.draw(MATERIALS["battlefield"])
+
                 # 更新鏡頭位置
                 cam = self.tanks.sprites()[0].cam
 
@@ -881,6 +889,12 @@ class Diepy:
             # 清所有精靈
             for _, rect, topleft, _, _ in sprites:
                 MATERIALS["battlefield"].blit(MATERIALS["background"], topleft, rect)
+
+            # 清能力值面板
+            if skill_panel:
+                for key, rect, topleft in skill_panel:
+                    image = MATERIALS[key]
+                    MATERIALS["battlefield"].blit(MATERIALS["background"], topleft, rect)
 
         else:
             # 清坦克
@@ -900,6 +914,16 @@ class Diepy:
             # 清升級十字
             self.crosses.clear(MATERIALS["battlefield"], MATERIALS["background"])
            
-            # 清能力值面板
+            # 清血條
             for tank in self.tanks:
-                tank.skill_panel.clear(MATERIALS["battlefield"], MATERIALS["background"])
+                tank.hpbar.clear(MATERIALS["battlefield"], MATERIALS["background"])
+
+            if self.mode == "server":
+                # 清能力值面板
+                self.serverself_skill_panel.clear(MATERIALS["battlefield"], MATERIALS["background"])
+            
+            # 單人模式用
+            else:
+                # 清能力值面板
+                for tank in self.tanks:
+                    tank.skill_panel.clear(MATERIALS["battlefield"], MATERIALS["background"])

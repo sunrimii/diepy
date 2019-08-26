@@ -279,18 +279,40 @@ def draw_skill_panel_label():
             label.blit(surface, (x,9))
             pygame.image.save(label, f"materials/{word}-{lv}.png")
 
+def draw_hpbar():
+    hpbar = pygame.Surface((50, 10))
+        
+    pygame.image.save(hpbar, f"materials/hpbar-0.png")
+    pygame.image.save(hpbar, f"materials/hpbar-50.png")
+
+    for rw in range(2, 50, 2):
+        hpbar = pygame.Surface((50, 10))
+
+        # 黑
+        pygame.gfxdraw.filled_circle(hpbar, 5, 5, 5, DARK_GRAY)
+        pygame.gfxdraw.box(hpbar, (5, 0, 40, 10), DARK_GRAY)
+        pygame.gfxdraw.filled_circle(hpbar, 45, 5, 5, DARK_GRAY)
+        
+        # 綠
+        pygame.gfxdraw.filled_circle(hpbar, 5, 5, 3, COLOR_OF_HP)
+        pygame.gfxdraw.box(hpbar, (5, 2, rw-3, 6), COLOR_OF_HP)
+        pygame.gfxdraw.filled_circle(hpbar, rw, 5, 3, COLOR_OF_HP)
+    
+        pygame.image.save(hpbar, f"materials/hpbar-{rw}.png")
+
 # 若素材不存在則產生
 if 1 or not os.path.isdir("materials"):
     # os.mkdir("materials")
     # draw_battlefield()
     # draw_tank_and_bullet()
     # draw_mothership()
-    draw_trigonship()
+    # draw_trigonship()
     # draw_squareship()
     # draw_pentagonship()
     # draw_cross()
     # draw_start_menu_label()
     # draw_skill_panel_label()
+    draw_hpbar()
     pass
 
 if __name__ != "__main__":
@@ -325,12 +347,16 @@ if __name__ != "__main__":
     # 載入升級十字
     MATERIALS["cross"] = pygame.image.load(f"materials/cross.png")
 
-    # 將剩餘黑色設為透明
-    for image_key in MATERIALS:
-        if image_key != "battlefield" and image_key != "background":
-            MATERIALS[image_key].set_colorkey(BLACK)
+    # 載入血條
+    for i in range(0, 52, 2):
+        MATERIALS[f"hpbar-{i}"] = pygame.image.load(f"materials/hpbar-{i}.png")
 
     # 載入能力值面板
     for word in ("Barrel", "Reload Time", "Bullet Damage", "Bullet Speed", "Movement Speed"):
         for lv in range(6):
             MATERIALS[f"{word}-{lv}"] = pygame.image.load(f"materials/{word}-{lv}.png")
+    
+    # 將剩餘黑色設為透明
+    for image_key in MATERIALS:
+        if image_key != "battlefield" and image_key != "background":
+            MATERIALS[image_key].set_colorkey(BLACK)
