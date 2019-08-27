@@ -22,14 +22,14 @@ if __name__ == "__main__":
         from network import Server, Handler
 
 
-        host = "127.0.0.1"
+        host = "192.168.1.100"
         port = 5278
         with Server((host, port), Handler, diepy) as server:
             # 每有一客戶端連入就啟動一分支伺服器
             server_thread = threading.Thread(target=server.serve_forever, daemon=True)
             server_thread.start()
 
-            # 
+            # 等待連線數 待改
             while len(server.game.tanks) < 2:
                 time.sleep(0.01)
             
@@ -70,7 +70,7 @@ if __name__ == "__main__":
         from network import Client
 
 
-        host = "127.0.0.1"
+        host = "59.127.31.13"
         port = 5278
         with Client((host, port), diepy) as client:
             # 客戶端主循環

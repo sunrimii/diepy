@@ -31,21 +31,17 @@ class Bullet(pygame.sprite.Sprite):
         
         self.mask = MATERIALS["bullet-mask"]
 
-    def _update_fadein_fadeout(self, speedup_when_fadein=None, max_alive_time=None):
+    def _update_fadein_fadeout(self, max_alive_time=None):
         alive_time = pygame.time.get_ticks() - self.time_of_birth
 
         # 若有設定生命期限
         if max_alive_time and alive_time > max_alive_time:
             self.hp = 0
 
-        if (alive_time < 1000) and (self.hp > 0) and (self.image_alpha < 255):
+        if (alive_time < 10000) and (self.hp > 0) and (self.image_alpha < 255):
             # 剛產生時淡入
             self.image.set_alpha(self.image_alpha)
             self.image_alpha += 25
-
-            # 若有設定淡入時加速
-            if speedup_when_fadein:
-                self.speed *= speedup_when_fadein
         
         elif self.hp <= 0:
             self.damage = 0
@@ -108,9 +104,9 @@ class Trigonship(Bullet):
         self.hp = self.max_hp
         self.damage = 1
 
-        self.search_time = 30000
+        self.search_target_time = 10000
         # 設為負數使一開始就搜尋
-        self.time_of_starting_to_search = -self.search_time
+        self.time_of_starting_to_search_target = -self.search_target_time
 
         # 將起始位置從坦克中心移至砲口
         offset = pygame.math.Vector2(SIZE_OF_MOTHERSHIP/2, 0)
@@ -118,6 +114,9 @@ class Trigonship(Bullet):
         self.pos = pos + offset
 
         self.speed = pygame.math.Vector2(0, 0)
+        self.rotate_speed_time = 50
+        # 設為負數使一開始就旋轉
+        self.time_of_starting_to_rotate_speed = -self.rotate_speed_time
 
         self.time_of_birth = pygame.time.get_ticks()
         self.image_key = "trigonship"
@@ -130,24 +129,29 @@ class Trigonship(Bullet):
         self.hpbar = pygame.sprite.GroupSingle(Hpbar(self.image_key))
 
     def _update_target(self, tanks):
-        elapsed_time = pygame.time.get_ticks() - self.time_of_starting_to_search
+        elapsed_time = pygame.time.get_ticks() - self.time_of_starting_to_search_target
         
-        # 減少搜尋次數提升效能
-        if elapsed_time > self.search_time:
-            self.time_of_starting_to_search = pygame.time.get_ticks()
+        # 減少搜尋次數以提升效能
+        if elapsed_time > self.search_target_time:
+            self.time_of_starting_to_search_target = pygame.time.get_ticks()
 
             # 追蹤最接近的坦克
             self.target = min(tanks, key=lambda tank: self.pos.distance_squared_to(tank.pos))
-            # self.target = tanks.sprites()[0]
             
     def _update_speed(self):
-        # 旋轉角度(https://stackoverflow.com/questions/10473930/how-do-i-find-the-angle-between-2-points-in-pygame)
-        # 注意遊戲座標與常用座標不同(Y軸相反)使用時須加上負號
-        dx, dy = self.target.pos - self.pos
-        self.image_degs = math.degrees(math.atan2(-dy, dx))
+        elapsed_time = pygame.time.get_ticks() - self.time_of_starting_to_rotate_speed
         
-        self.speed.update(3, 0)
-        self.speed.rotate_ip(-self.image_degs)
+        # 減少旋轉次數以提升效能
+        if elapsed_time > self.rotate_speed_time:
+            self.time_of_starting_to_rotate_speed = pygame.time.get_ticks()
+
+            # 旋轉角度(https://stackoverflow.com/questions/10473930/how-do-i-find-the-angle-between-2-points-in-pygame)
+            # 注意遊戲座標與常用座標不同(Y軸相反)使用時須加上負號
+            dx, dy = self.target.pos - self.pos
+            self.image_degs = math.degrees(math.atan2(-dy, dx))
+            
+            self.speed.update(3, 0)
+            self.speed.rotate_ip(-self.image_degs)
 
     def _update_image_rotation(self):
         self.image = pygame.transform.rotate(MATERIALS[self.image_key], self.image_degs)
@@ -168,7 +172,7 @@ class Trigonship(Bullet):
         self._update_speed()
         self._update_image_rotation()
         self._update_pos()
-        self._update_fadein_fadeout(speedup_when_fadein=2)
+        self._update_fadein_fadeout()
         self.hpbar.update(self.hp, self.max_hp, self.pos, self.image_key)
 
 class Squareship(Trigonship):
@@ -177,6 +181,7 @@ class Squareship(Trigonship):
 
         self.max_hp = 4
         self.hp = self.max_hp
+        self.damage = 2
 
         self.image_key = "squareship"
         self.image = MATERIALS[self.image_key]
@@ -196,6 +201,7 @@ class Pentagonship(Trigonship):
 
         self.max_hp = 6
         self.hp = self.max_hp
+        self.damage = 3
 
         self.image_key = "pentagonship"
         self.image = MATERIALS[self.image_key]
@@ -223,9 +229,9 @@ class Mothership(Trigonship):
         
         self.speed = pygame.math.Vector2(0, 0)
         
-        self.search_time = 20000
+        self.search_target_time = 20000
         # 設為負數使一開始就搜尋
-        self.time_of_starting_to_search = -self.search_time
+        self.time_of_starting_to_search_target = -self.search_target_time
 
         self.maxnum_of_littleships = maxnum_of_littleships
         self.littleships = pygame.sprite.Group()
@@ -400,9 +406,9 @@ class Tank(Mothership):
 
         # 初始化能力值面板
         self.num_of_barrel_label = SkillPanelLabel("Barrel", (50,800), pygame.K_1)
-        self.reload_time_label = SkillPanelLabel("Reload Time", (50,850), pygame.K_2)
-        self.bullet_damage_label = SkillPanelLabel("Bullet Damage", (50,900), pygame.K_3)
-        self.bullet_speed_label = SkillPanelLabel("Bullet Speed", (50,950), pygame.K_4)
+        self.bullet_damage_label = SkillPanelLabel("Bullet Damage", (50,900), pygame.K_2)
+        self.bullet_speed_label = SkillPanelLabel("Bullet Speed", (50,950), pygame.K_3)
+        self.reload_time_label = SkillPanelLabel("Reload Time", (50,850), pygame.K_4)
         self.max_speed_label = SkillPanelLabel("Movement Speed", (50,1000), pygame.K_5)
         self.skill_panel = pygame.sprite.Group()
         self.skill_panel.add(self.num_of_barrel_label)
@@ -412,7 +418,7 @@ class Tank(Mothership):
         self.skill_panel.add(self.max_speed_label)
 
         # 初始化能力值點數 以列表儲存為了傳址
-        self.skill_pnt = [0]
+        self.skill_pnt = [1]
 
         self.max_hp = 20
         self.hp = self.max_hp
@@ -469,8 +475,8 @@ class Tank(Mothership):
             self.speed.x = 0
 
         # 若進入地圖邊緣會減速
-        x_in_slowzone = not(300 < self.pos.x < SIZE_OF_BATTLEFIELD-300)
-        y_in_slowzone = not(300 < self.pos.y < SIZE_OF_BATTLEFIELD-300)
+        x_in_slowzone = not (300 < self.pos.x < SIZE_OF_BATTLEFIELD-300)
+        y_in_slowzone = not (300 < self.pos.y < SIZE_OF_BATTLEFIELD-300)
         if x_in_slowzone or y_in_slowzone:
             self.speed /= 1.01
         
@@ -561,7 +567,15 @@ class Tank(Mothership):
         if (not self.is_reloading) and is_clicked:
             self.is_reloading = True
             self.time_of_starting_to_reload = pygame.time.get_ticks()
-            if self.num_of_barrel:
+
+            if self.num_of_barrel != 1:
+                for i in range(1, self.num_of_barrel // 2 + 1):
+                    bullet = Bullet(self.color, self.pos, self.image_degs+10*i, self.bullet_damage, self.bullet_speed)
+                    self.bullets.add(bullet)
+                    bullet = Bullet(self.color, self.pos, self.image_degs-10*i, self.bullet_damage, self.bullet_speed)
+                    self.bullets.add(bullet)
+
+            if self.num_of_barrel % 2:
                 bullet = Bullet(self.color, self.pos, self.image_degs, self.bullet_damage, self.bullet_speed)
                 self.bullets.add(bullet)
 
@@ -669,7 +683,7 @@ class Diepy:
         self.is_running = True
         
         # 初始化畫面
-        self.display = pygame.display.set_mode((1920, 1080))
+        self.display = pygame.display.set_mode((1920, 1080), pygame.RESIZABLE)
         icon = pygame.image.load("icon.png")
         pygame.display.set_icon(icon)
         pygame.display.set_caption("Diepy")
@@ -756,7 +770,7 @@ class Diepy:
     def add_mothership(self):
         """加入母艦 數量與客戶端人數相同"""
 
-        maxnum_of_littleships = 50 / len(self.tanks)
+        maxnum_of_littleships = 40 / len(self.tanks)
 
         for _ in range(len(self.tanks)):
             mothership = Mothership(maxnum_of_littleships)
@@ -767,7 +781,7 @@ class Diepy:
 
         # 限制總數量
         if len(self.crosses) < 10:
-            max_ = 500 // len(self.tanks)
+            max_ = 1000 // len(self.tanks)
             # 只有選中是0時才增加
             if not random.randint(0, max_):
                 self.crosses.add(Cross())
@@ -804,6 +818,7 @@ class Diepy:
         
         sprites = []
 
+        # 坦克
         for tank in self.tanks:
             key = tank.image_key
             rect = tank.rect
@@ -814,6 +829,15 @@ class Diepy:
             if alpha > 0:
                 sprites.append((key, rect, topleft, alpha, degs))
 
+            # 坦克血條
+            key = tank.hpbar.sprite.image_key
+            rect = tank.hpbar.sprite.rect
+            topleft = tank.hpbar.sprite.rect.topleft
+            alpha = 255
+            degs = 0
+            sprites.append((key, rect, topleft, alpha, degs))
+
+            # 坦克子彈
             for bullet in tank.bullets:
                 key = bullet.image_key
                 rect = bullet.rect
@@ -824,13 +848,7 @@ class Diepy:
                 if alpha > 0:
                     sprites.append((key, rect, topleft, alpha, degs))
 
-            key = tank.hpbar.sprite.image_key
-            rect = tank.hpbar.sprite.rect
-            topleft = tank.hpbar.sprite.rect.topleft
-            alpha = 255
-            degs = 0
-            sprites.append((key, rect, topleft, alpha, degs))
-
+        # 母艦
         for mothership in self.motherships:
             key = mothership.image_key
             rect = mothership.rect
@@ -841,6 +859,15 @@ class Diepy:
             if alpha > 0:
                 sprites.append((key, rect, topleft, alpha, degs))
 
+            # 母艦血條
+            key = mothership.hpbar.sprite.image_key
+            rect = mothership.hpbar.sprite.rect
+            topleft = mothership.hpbar.sprite.rect.topleft
+            alpha = 255
+            degs = 0
+            sprites.append((key, rect, topleft, alpha, degs))
+
+            # 小飛機
             for littleship in mothership.littleships:
                 key = littleship.image_key
                 rect = littleship.rect
@@ -850,6 +877,14 @@ class Diepy:
 
                 if alpha > 0:
                     sprites.append((key, rect, topleft, alpha, degs))
+
+                # 小飛機血條
+                key = littleship.hpbar.sprite.image_key
+                rect = littleship.hpbar.sprite.rect
+                topleft = littleship.hpbar.sprite.rect.topleft
+                alpha = 255
+                degs = 0
+                sprites.append((key, rect, topleft, alpha, degs))
     
         return sprites
 
