@@ -683,7 +683,7 @@ class Diepy:
         self.is_running = True
         
         # 初始化畫面
-        self.display = pygame.display.set_mode((1920, 1080), pygame.RESIZABLE)
+        self.display = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
         icon = pygame.image.load("icon.png")
         pygame.display.set_icon(icon)
         pygame.display.set_caption("Diepy")
