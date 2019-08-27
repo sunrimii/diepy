@@ -2,9 +2,14 @@
 
 遊戲畫面
 
+遊戲畫面
+
+遊戲畫面
+
 ## 執行步驟
 
 `$ pip -r requirements.txt`
+
 `$ python game.pyw`
 
 ## 操作說明
