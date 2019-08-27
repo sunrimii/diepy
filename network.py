@@ -98,11 +98,9 @@ class Client:
         self.cam = ()
         
     def __enter__(self):
-        print("開啟客戶端")
         return self
 
     def __exit__(self, *arg):
-        print("關閉客戶端")
         self.sock.close()
 
     def recv_(self):

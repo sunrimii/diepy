@@ -213,7 +213,7 @@ class Mothership(Trigonship):
     def __init__(self, maxnum_of_littleships):
         pygame.sprite.Sprite.__init__(self)
 
-        self.max_hp = 5000
+        self.max_hp = 3000
         self.hp = self.max_hp
         self.damage = 99999
 
@@ -412,7 +412,7 @@ class Tank(Mothership):
         self.skill_panel.add(self.max_speed_label)
 
         # 初始化能力值點數 以列表儲存為了傳址
-        self.skill_pnt = [8]
+        self.skill_pnt = [0]
 
         self.max_hp = 20
         self.hp = self.max_hp
