@@ -87,10 +87,16 @@ class Handler(socketserver.BaseRequestHandler):
             del self.server.cams[self.client_address]
 
 class Client:
-    def __init__(self, addr):
+    def __init__(self, addr, game):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect(addr)
 
+        self.game = game
+
+        self.sprites = ()
+        self.skill_panel = ()
+        self.cam = ()
+        
     def __enter__(self):
         print("開啟客戶端")
         return self

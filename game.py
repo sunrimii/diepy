@@ -22,12 +22,12 @@ if __name__ == "__main__":
         from network import Server, Handler
 
 
-        host = "127.0.0.1"
+        host = "192.168.1.100"
         port = 5278
         with Server((host, port), Handler, diepy) as server:
             # 每有一客戶端連入就啟動一分支伺服器
             server_thread = threading.Thread(target=server.serve_forever)
-            # server_thread.daemon = True # 主執行緒關閉時也關閉其他所有執行緒
+            server_thread.daemon = True # 主執行緒關閉時也關閉其他所有執行緒
             server_thread.start()
 
             # 
@@ -60,19 +60,23 @@ if __name__ == "__main__":
                     time.sleep(0.01)
                 
                 # 伺服器自己更新螢幕
-                diepy.update_screen()
+                # diepy.update_screen()
+                update_screen_thread = threading.Thread(target=diepy.update_screen)
+                update_screen_thread.daemon = True # 主執行緒關閉時也關閉其他所有執行緒
+                update_screen_thread.start()
 
             server.shutdown()
     
     elif diepy.mode == "client":
+        import threading
         import time
 
         from network import Client
 
 
-        host = "127.0.0.1"
+        host = "192.168.1.100"
         port = 5278
-        with Client((host, port)) as client:
+        with Client((host, port), diepy) as client:
             # 客戶端主循環
             while diepy.is_running:
                 # 傳送輸入事件給分支伺服器
@@ -80,6 +84,8 @@ if __name__ == "__main__":
                 client.sendall_(event)
 
                 # 等待分支伺服器傳來繪製位置和鏡頭位置
-                sprites, skill_panel, cam = client.recv_()
+                client.sprites, client.skill_panel, client.cam = client.recv_()
 
-                diepy.update_screen(sprites, skill_panel, cam)
+                update_screen_thread = threading.Thread(target=Diepy.update_screen, args=(diepy, client.sprites, client.skill_panel, client.cam))
+                update_screen_thread.daemon = True # 主執行緒關閉時也關閉其他所有執行緒
+                update_screen_thread.start()

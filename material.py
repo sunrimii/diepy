@@ -12,9 +12,9 @@ SIZE_OF_MOTHERSHIP = 350
 SIZE_OF_LITTLESHIP = 40
 SIZE_OF_CROSS = 60
 
-COLOR_OF_BATTLEFIELD = (205, 205, 205)
+COLOR_OF_BATTLEFIELD = (210, 210, 210)
 COLOR_OF_GRID = (215, 215, 215)
-COLOR_OF_SLOWZONE = (210, 210, 210)
+COLOR_OF_SLOWZONE = (205, 205, 205)
 COLOR_OF_HP = (100, 200, 100)
 
 BLACK = (0, 0, 0)
@@ -34,7 +34,7 @@ DARK_YELLOW = (191, 174, 78)
 DARK_GREEN = (10, 168, 82)
 DARK_BLUE = (0, 133, 168)
 DARK_PURPLE = (143, 95, 183)
-DARK_BROWN = (99, 62, 41)
+DARK_BROWN = (109, 72, 51)
 
 
 def draw_battlefield():
@@ -295,8 +295,8 @@ def draw_hpbar():
         
         # 綠
         pygame.gfxdraw.filled_circle(hpbar, 5, 5, 3, COLOR_OF_HP)
-        pygame.gfxdraw.box(hpbar, (5, 2, rw-3, 6), COLOR_OF_HP)
-        pygame.gfxdraw.filled_circle(hpbar, rw, 5, 3, COLOR_OF_HP)
+        pygame.gfxdraw.box(hpbar, (5, 2, rw-5, 6), COLOR_OF_HP)
+        pygame.gfxdraw.filled_circle(hpbar, rw-5, 5, 3, COLOR_OF_HP)
     
         pygame.image.save(hpbar, f"materials/hpbar-{rw}.png")
 
