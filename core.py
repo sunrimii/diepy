@@ -24,7 +24,7 @@ class Bullet(pygame.sprite.Sprite):
         self.time_of_birth = pygame.time.get_ticks()
         self.image_key = f"{color}-bullet"
         self.image = MATERIALS[self.image_key].copy()
-        self.image_alpha = 0
+        self.image_alpha = 255
         self.image_scale = 1
 
         self.rect = self.image.get_rect(center=self.pos)
@@ -38,12 +38,13 @@ class Bullet(pygame.sprite.Sprite):
         if max_alive_time and alive_time > max_alive_time:
             self.hp = 0
 
-        if (alive_time < 20000) and (self.hp > 0) and (self.image_alpha < 255):
-            # 剛產生時淡入
-            self.image.set_alpha(self.image_alpha)
-            self.image_alpha += 40
+        # if (alive_time < 20000) and (self.hp > 0) and (self.image_alpha < 255):
+        #     # 剛產生時淡入
+        #     self.image.set_alpha(self.image_alpha)
+        #     self.image_alpha += 40
         
-        elif self.hp <= 0:
+        # elif self.hp <= 0:
+        if self.hp <= 0:
             self.damage = 0
 
             self.image_scale *= 1.035
@@ -121,7 +122,7 @@ class Trigonship(Bullet):
         self.time_of_birth = pygame.time.get_ticks()
         self.image_key = "trigonship"
         self.image = MATERIALS[self.image_key]
-        self.image_alpha = 0
+        self.image_alpha = 255
         self.image_scale = 1
 
         self.rect = self.image.get_rect(center=self.pos)
@@ -247,7 +248,7 @@ class Mothership(Trigonship):
         self.image_series = "mothership"
         self.image_key = f"{self.image_series}-1.0"
         self.image = MATERIALS[self.image_key]
-        self.image_alpha = 0
+        self.image_alpha = 255
         self.image_degs = 0
         self.image_scale = 1
         
@@ -373,7 +374,7 @@ class Cross(Mothership):
         self.time_of_birth = pygame.time.get_ticks()
         self.image_key = "cross"
         self.image = MATERIALS["cross"]
-        self.image_alpha = 0
+        self.image_alpha = 255
         self.image_degs = random.randint(0, 359)
         self.image_scale = 1
         
@@ -418,7 +419,7 @@ class Tank(Mothership):
         self.skill_panel.add(self.max_speed_label)
 
         # 初始化能力值點數 以列表儲存為了傳址
-        self.skill_pnt = [1]
+        self.skill_pnt = [0]
 
         self.max_hp = 20
         self.hp = self.max_hp
@@ -441,7 +442,7 @@ class Tank(Mothership):
         self.image_key = f"{self.image_series}-1.0"
         self.image = MATERIALS[self.image_key]
         self.image_degs = 0
-        self.image_alpha = 0
+        self.image_alpha = 255
         self.image_scale = 1
         
         self.rect = self.image.get_rect(center=self.pos)
@@ -658,7 +659,7 @@ class SkillPanelLabel(pygame.sprite.Sprite):
         self.text = text
         self.image_key = f"{self.text}-0"
         self.image = MATERIALS[self.image_key]
-        self.image_alpha = 0
+        self.image_alpha = 255
         
         self.rect = self.image.get_rect()
         
@@ -683,7 +684,7 @@ class Diepy:
         self.is_running = True
         
         # 初始化畫面
-        self.display = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
+        self.display = pygame.display.set_mode((1920, 1080))
         icon = pygame.image.load("icon.png")
         pygame.display.set_icon(icon)
         pygame.display.set_caption("Diepy")
@@ -886,6 +887,17 @@ class Diepy:
                 degs = 0
                 sprites.append((key, rect, topleft, alpha, degs))
     
+        # 升級十字
+        for cross in self.crosses:
+            key = cross.image_key
+            rect = cross.rect
+            topleft = cross.rect.topleft
+            alpha = cross.image_alpha
+            degs = cross.image_degs
+
+            if alpha > 0:
+                sprites.append((key, rect, topleft, alpha, degs))
+        
         return sprites
 
     def get_skill_panels(self):
