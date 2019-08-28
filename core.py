@@ -38,15 +38,15 @@ class Bullet(pygame.sprite.Sprite):
         if max_alive_time and alive_time > max_alive_time:
             self.hp = 0
 
-        if (alive_time < 10000) and (self.hp > 0) and (self.image_alpha < 255):
+        if (alive_time < 20000) and (self.hp > 0) and (self.image_alpha < 255):
             # 剛產生時淡入
             self.image.set_alpha(self.image_alpha)
-            self.image_alpha += 25
+            self.image_alpha += 40
         
         elif self.hp <= 0:
             self.damage = 0
 
-            self.image_scale *= 1.028
+            self.image_scale *= 1.035
             w = int(MATERIALS[self.image_key].get_width() * self.image_scale)
             h = int(MATERIALS[self.image_key].get_height() * self.image_scale)
             self.image = pygame.transform.scale(self.image, (w,h))
@@ -54,7 +54,7 @@ class Bullet(pygame.sprite.Sprite):
             self.rect = self.image.get_rect(center=self.pos)
             
             # 死亡時淡出
-            self.image_alpha -= 20
+            self.image_alpha -= 40
             self.image.set_alpha(self.image_alpha)
 
             # 完全淡出後刪除
@@ -150,7 +150,7 @@ class Trigonship(Bullet):
             dx, dy = self.target.pos - self.pos
             self.image_degs = math.degrees(math.atan2(-dy, dx))
             
-            self.speed.update(3, 0)
+            self.speed.update(6, 0)
             self.speed.rotate_ip(-self.image_degs)
 
     def _update_image_rotation(self):
@@ -192,7 +192,7 @@ class Squareship(Trigonship):
         dx, dy = self.target.pos - self.pos
         self.image_degs = math.degrees(math.atan2(-dy, dx))
         
-        self.speed.update(4, 0)
+        self.speed.update(8, 0)
         self.speed.rotate_ip(-self.image_degs)
 
 class Pentagonship(Trigonship):
@@ -212,7 +212,7 @@ class Pentagonship(Trigonship):
         dx, dy = self.target.pos - self.pos
         self.image_degs = math.degrees(math.atan2(-dy, dx))
         
-        self.speed.update(5, 0)
+        self.speed.update(10, 0)
         self.speed.rotate_ip(-self.image_degs)
 
 class Mothership(Trigonship):
@@ -258,7 +258,7 @@ class Mothership(Trigonship):
     def _update_speed(self):
         dx, dy = self.target.pos - self.pos
         degs = math.degrees(math.atan2(dy, dx))
-        self.speed.update(1, 0)
+        self.speed.update(2, 0)
         self.speed.rotate_ip(degs)
     
     def _update_cooldown_time(self):
@@ -516,7 +516,7 @@ class Tank(Mothership):
 
     def _update_cam(self):
         # 使鏡頭平滑移動 數字越小鏡頭移動越慢
-        self.cam_pos += (self.pos-self.cam_pos) * 0.03
+        self.cam_pos += (self.pos-self.cam_pos) * 0.05
         self.cam.center = self.cam_pos
 
         # 限制鏡頭邊界
@@ -560,8 +560,8 @@ class Tank(Mothership):
         self.num_of_barrel = self.num_of_barrel_label.lv + 1
         self.reload_time = 300 - self.reload_time_label.lv * 50
         self.bullet_damage = 1 + self.bullet_damage_label.lv
-        self.bullet_speed = 2.5 + self.bullet_speed_label.lv * 0.5
-        self.max_speed = 3 + self.max_speed_label.lv * 0.5
+        self.bullet_speed = 5 + self.bullet_speed_label.lv *1
+        self.max_speed = 4.5 + self.max_speed_label.lv * 1
         
         # 左鍵發射子彈
         if (not self.is_reloading) and is_clicked:
@@ -1001,7 +1001,7 @@ class Diepy:
 
         # 將鏡頭中的戰場更新到畫面上
         self.display.blit(MATERIALS["battlefield"], (0,0), cam)
-        self.clock.tick(60)
+        self.clock.tick(30)
         pygame.display.update()
 
         if self.mode == "client":
