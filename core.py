@@ -230,7 +230,7 @@ class Mothership(Trigonship):
         
         self.speed = pygame.math.Vector2(0, 0)
         
-        self.search_target_time = 20000
+        self.search_target_time = 10000
         # 設為負數使一開始就搜尋
         self.time_of_starting_to_search_target = -self.search_target_time
 
@@ -241,7 +241,7 @@ class Mothership(Trigonship):
         self.reload_time = 300
         self.is_cooling = False # 主要用於計算攻擊時機
         self.time_of_starting_to_cool = 0
-        self.max_cooldown_time = 5000
+        self.max_cooldown_time = 4000
         self.cooldown_time = self.max_cooldown_time
 
         self.time_of_birth = pygame.time.get_ticks()
@@ -341,7 +341,7 @@ class Mothership(Trigonship):
                 if p < self.cooldown_time:
                     littleship_type = Trigonship
                 
-                elif p < self.cooldown_time*2:
+                elif p < self.cooldown_time*3:
                     littleship_type = Squareship
 
                 else:
@@ -407,9 +407,9 @@ class Tank(Mothership):
 
         # 初始化能力值面板
         self.num_of_barrel_label = SkillPanelLabel("Barrel", (50,800), pygame.K_1)
-        self.bullet_damage_label = SkillPanelLabel("Bullet Damage", (50,900), pygame.K_2)
-        self.bullet_speed_label = SkillPanelLabel("Bullet Speed", (50,950), pygame.K_3)
-        self.reload_time_label = SkillPanelLabel("Reload Time", (50,850), pygame.K_4)
+        self.bullet_damage_label = SkillPanelLabel("Bullet Damage", (50,850), pygame.K_2)
+        self.bullet_speed_label = SkillPanelLabel("Bullet Speed", (50,900), pygame.K_3)
+        self.reload_time_label = SkillPanelLabel("Reload Time", (50,950), pygame.K_4)
         self.max_speed_label = SkillPanelLabel("Movement Speed", (50,1000), pygame.K_5)
         self.skill_panel = pygame.sprite.Group()
         self.skill_panel.add(self.num_of_barrel_label)
@@ -430,7 +430,7 @@ class Tank(Mothership):
         self.pos = pygame.math.Vector2(pos)
 
         self.speed = pygame.math.Vector2(0, 0)
-        self.acc = 0.2
+        # self.acc = 0.2
         self.recoil = pygame.math.Vector2(0.01, 0)
         
         self.bullets = pygame.sprite.Group()
@@ -561,8 +561,9 @@ class Tank(Mothership):
         self.num_of_barrel = self.num_of_barrel_label.lv + 1
         self.reload_time = 300 - self.reload_time_label.lv * 50
         self.bullet_damage = 1 + self.bullet_damage_label.lv
-        self.bullet_speed = 5 + self.bullet_speed_label.lv *1
-        self.max_speed = 4.5 + self.max_speed_label.lv * 1
+        self.bullet_speed = 5 + self.bullet_speed_label.lv * 1.5
+        self.max_speed = 4.5 + self.max_speed_label.lv
+        self.acc = 0.2 + self.max_speed_label.lv * 0.1
         
         # 左鍵發射子彈
         if (not self.is_reloading) and is_clicked:
@@ -579,6 +580,9 @@ class Tank(Mothership):
             if self.num_of_barrel % 2:
                 bullet = Bullet(self.color, self.pos, self.image_degs, self.bullet_damage, self.bullet_speed)
                 self.bullets.add(bullet)
+
+        # 逐漸恢復血量
+        self.hp = min(self.hp+0.006, self.max_hp)
 
         self._update_reload_time_and_image_key()
         self._update_speed(pressed_keys)
@@ -771,9 +775,9 @@ class Diepy:
     def add_mothership(self):
         """加入母艦 數量與客戶端人數相同"""
 
-        maxnum_of_littleships = 40 / len(self.tanks)
+        maxnum_of_littleships = 25 / len(self.tanks)
 
-        for _ in range(len(self.tanks)):
+        for _ in range(len(self.tanks) + 1):
             mothership = Mothership(maxnum_of_littleships)
             self.motherships.add(mothership)
 
@@ -782,7 +786,7 @@ class Diepy:
 
         # 限制總數量
         if len(self.crosses) < 10:
-            max_ = 1000 // len(self.tanks)
+            max_ = 300 // len(self.tanks)
             # 只有選中是0時才增加
             if not random.randint(0, max_):
                 self.crosses.add(Cross())
