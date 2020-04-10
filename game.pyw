@@ -70,7 +70,7 @@ if __name__ == "__main__":
         from network import Client
 
 
-        host = "59.127.31.13"
+        host = "192.168.1.100"
         port = 5278
         with Client((host, port), diepy) as client:
             # 客戶端主循環
