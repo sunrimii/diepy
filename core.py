@@ -785,8 +785,8 @@ class Diepy:
         """加入升級十字 產生機率根據客戶端人數遞增"""
 
         # 限制總數量
-        if len(self.crosses) < 10:
-            max_ = 300 // len(self.tanks)
+        if len(self.crosses) < 20:
+            max_ = 100 // len(self.tanks)
             # 只有選中是0時才增加
             if not random.randint(0, max_):
                 self.crosses.add(Cross())
@@ -1017,7 +1017,7 @@ class Diepy:
 
         # 將鏡頭中的戰場更新到畫面上
         self.display.blit(MATERIALS["battlefield"], (0,0), cam)
-        self.clock.tick(30)
+        self.clock.tick(60)
         pygame.display.update()
 
         if self.mode == "client":
