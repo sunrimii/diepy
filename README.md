@@ -16,4 +16,5 @@
 
 # 執行步驟
 `$ pip -r requirements.txt`
+
 `$ python game.pyw`
